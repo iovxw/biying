@@ -3,7 +3,7 @@ rust:
   - nightly
 matrix:
   fast_finish: true
-
+dist: xenial
 addons:
   apt:
     packages:
