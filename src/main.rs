@@ -1,5 +1,13 @@
-use qmetaobject::*;
+use cpp::*;
 use cstr::*;
+use qmetaobject::*;
+
+cpp! {{
+    #include <QtCore/QTranslator>
+    #include <QtWidgets/QApplication>
+
+    static QTranslator translator;
+}}
 
 #[derive(QObject, Default)]
 struct Greeter {
@@ -11,19 +19,24 @@ struct Greeter {
     }),
 }
 
+qrc! { init_ressource,
+     "/" {
+         "assets/main.qml",
+         "assets/i18n/zh_CN.qm",
+     },
+}
+
 fn main() {
+    init_ressource();
     qml_register_type::<Greeter>(cstr!("Greeter"), 1, 0, cstr!("Greeter"));
     let mut engine = QmlEngine::new();
-    engine.load_data(
-        r#"import QtQuick 2.6;
-import QtQuick.Window 2.0;
-import Greeter 1.0
-Window {
-    visible: true;
-    Greeter { id: greeter; name: 'World'; }
-    Text { anchors.centerIn: parent; text: greeter.compute_greetings('hello'); }
-}"#
-        .into(),
-    );
+    let engine = &mut engine;
+    unsafe {
+        cpp!([] {
+            translator.load(QLocale::system(), "", "", ":/assets/i18n");
+            QApplication::installTranslator(&translator);
+        });
+    }
+    engine.load_file(":/assets/main.qml".into());
     engine.exec();
 }

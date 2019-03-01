@@ -6,6 +6,10 @@ edition = "2018"
 
 [dependencies]
 cstr = "0.1"
+cpp = "0.5"
 qmetaobject = "0.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+
+[build-dependencies]
+cpp_build = "0.5"

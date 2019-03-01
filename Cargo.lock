@@ -17,6 +17,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "biying"
 version = "0.1.0"
 dependencies = [
+ "cpp 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cpp_build 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "cstr 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "qmetaobject 0.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.88 (registry+https://github.com/rust-lang/crates.io-index)",
