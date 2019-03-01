@@ -10,8 +10,6 @@ addons:
       - sourceline: 'ppa:beineri/opt-qt-5.12.1-xenial'
     packages:
       - mesa-common-dev
-      - qt512declarative #qtdeclarative5-dev
+      - qt512declarative
 install:
-  - mkdir -p ~/.config/qtchooser
-  - echo /opt/qt512/bin >> ~/.config/qtchooser/default.conf
-  - echo /opt/qt512/lib >> ~/.config/qtchooser/default.conf
+  - source /opt/qt512/bin/qt512-env.sh
