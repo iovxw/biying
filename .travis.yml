@@ -8,3 +8,4 @@ addons:
   apt:
     packages:
       - qtdeclarative5-dev
+      - qt5-default
