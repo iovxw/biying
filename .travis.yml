@@ -6,6 +6,11 @@ matrix:
 dist: xenial
 addons:
   apt:
+    sources:
+      - sourceline: 'ppa:beineri/opt-qt-5.12.1-xenial'
     packages:
-      - qtdeclarative5-dev
-      - qt5-default
+      - qt512declarative #qtdeclarative5-dev
+install:
+  - mkdir -p ~/.config/qtchooser
+  - echo /opt/qt512/bin >> ~/.config/qtchooser/default.conf
+  - echo /opt/qt512/lib >> ~/.config/qtchooser/default.conf
