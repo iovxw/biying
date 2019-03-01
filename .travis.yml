@@ -3,3 +3,8 @@ rust:
   - nightly
 matrix:
   fast_finish: true
+
+addons:
+  apt:
+    packages:
+      - qtdeclarative5-dev
