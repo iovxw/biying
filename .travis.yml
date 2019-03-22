@@ -9,6 +9,7 @@ addons:
     sources:
       - sourceline: 'ppa:beineri/opt-qt-5.12.1-xenial'
     packages:
+      - mesa-common-dev
       - qt512declarative
 install:
   - source /opt/qt512/bin/qt512-env.sh
