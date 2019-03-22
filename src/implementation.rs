@@ -203,6 +203,20 @@ impl From<&ImageMeta> for QWallpaperInfo {
 }
 
 fn fetch_wallpapers(offset: usize, limit: usize) -> Result<Vec<RawImage>, failure::Error> {
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert(
+        "X-AVOSCloud-Application-Id",
+        reqwest::header::HeaderValue::from_static(env!("AVOS_ID")),
+    );
+    headers.insert(
+        "X-AVOSCloud-Application-Key",
+        reqwest::header::HeaderValue::from_static(env!("AVOS_KEY")),
+    );
+    let client = reqwest::Client::builder()
+        .default_headers(headers)
+        .build()
+        .expect("build client");
+
     let offset = offset.to_string();
     let limit = limit.to_string();
     let url = reqwest::Url::parse_with_params(
@@ -215,12 +229,7 @@ fn fetch_wallpapers(offset: usize, limit: usize) -> Result<Vec<RawImage>, failur
     )
     .expect("parse url");
 
-    let resp: Response<RawImage> = reqwest::Client::new()
-        .get(url)
-        .header("X-AVOSCloud-Application-Id", env!("AVOS_ID"))
-        .header("X-AVOSCloud-Application-Key", env!("AVOS_KEY"))
-        .send()?
-        .json()?;
+    let resp: Response<RawImage> = client.get(url).send()?.json()?;
     let mut images = resp?;
 
     let where_query: Vec<String> = images
@@ -240,12 +249,7 @@ fn fetch_wallpapers(offset: usize, limit: usize) -> Result<Vec<RawImage>, failur
     )
     .expect("parse url");
 
-    let resp: Response<ImageMeta> = reqwest::Client::new()
-        .get(url)
-        .header("X-AVOSCloud-Application-Id", env!("AVOS_ID"))
-        .header("X-AVOSCloud-Application-Key", env!("AVOS_KEY"))
-        .send()?
-        .json()?;
+    let resp: Response<ImageMeta> = client.get(url).send()?.json()?;
     let metas = resp?;
 
     for meta in metas {
