@@ -21,20 +21,22 @@ ApplicationWindow {
         boundsBehavior: Flickable.DragOverBounds
         contentHeight: grid.height
         ScrollBar.vertical: ScrollBar { }
+
+        Component.onCompleted: {
+            wallpapers.fetch_next_page()
+            wallpapers.onError.connect(function(err) {
+                console.log("error:", err)
+            })
+        }
+
+        onMovementEnded: if (atYEnd) {
+            wallpapers.fetch_next_page()
+        }
+
         Grid {
             id: grid
             columns: parent.width / previewW
             anchors.horizontalCenter: parent.horizontalCenter
-
-            Button {
-                text: "刷新！"
-                onClicked: {
-                    wallpapers.fetch_next_page()
-                    wallpapers.onError.connect(function(err) {
-                        console.log("error:", err)
-                    })
-                }
-            }
 
             Repeater {
                 model: wallpapers.list
@@ -43,11 +45,6 @@ ApplicationWindow {
                     height: previewH
                     width: previewW
                     color: Qt.rgba(Math.random(), Math.random(), Math.random(), Math.random())
-
-                   // onClick: {
-                   //     // start loading animation
-                   //     wallpapers.loadNextPage();
-                   // }
 
                     Image {
                         anchors.fill: parent
