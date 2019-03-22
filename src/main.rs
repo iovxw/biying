@@ -17,6 +17,7 @@ cpp! {{
 qrc! { init_ressource,
      "/" {
          "assets/main.qml",
+         "assets/background.png",
          "assets/i18n/zh_CN.qm",
      },
 }

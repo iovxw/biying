@@ -1,6 +1,7 @@
 import QtQuick 2.8
 import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.1
+import QtGraphicalEffects 1.0
 
 ApplicationWindow {
     property int previewH: 480/3
@@ -14,6 +15,13 @@ ApplicationWindow {
     minimumWidth: previewW
     minimumHeight: previewH
     height: 480
+
+    background: FastBlur {
+        source: Image {
+            source: "background.png"
+        }
+        radius: 64
+    }
 
     Flickable {
         anchors.fill: parent
@@ -47,7 +55,7 @@ ApplicationWindow {
                     delegate: Rectangle {
                         height: previewH
                         width: previewW
-                        color: Qt.rgba(Math.random(), Math.random(), Math.random(), Math.random())
+                        color: Qt.rgba(Math.random(), Math.random(), Math.random(), 0.3)
 
                         BusyIndicator {
                             height: 64
