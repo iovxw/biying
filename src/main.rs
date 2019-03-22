@@ -1,6 +1,11 @@
+#![feature(type_alias_enum_variants)]
+#![feature(try_trait)]
+
 use cpp::*;
-use cstr::*;
 use qmetaobject::*;
+
+mod implementation;
+mod listmodel;
 
 cpp! {{
     #include <QtCore/QTranslator>
@@ -8,16 +13,6 @@ cpp! {{
 
     static QTranslator translator;
 }}
-
-#[derive(QObject, Default)]
-struct Greeter {
-    base: qt_base_class!(trait QObject),
-    name: qt_property!(QString; NOTIFY name_changed),
-    name_changed: qt_signal!(),
-    compute_greetings: qt_method!(fn compute_greetings(&self, verb : String) -> QString {
-        return (verb + " " + &self.name.to_string()).into()
-    }),
-}
 
 qrc! { init_ressource,
      "/" {
@@ -28,8 +23,17 @@ qrc! { init_ressource,
 
 fn main() {
     init_ressource();
-    qml_register_type::<Greeter>(cstr!("Greeter"), 1, 0, cstr!("Greeter"));
     let mut engine = QmlEngine::new();
+
+    let wallpapers = implementation::Wallpapers::default();
+    let wallpapers = QObjectBox::new(wallpapers);
+    let wallpapers = wallpapers.pinned();
+    //unsafe {
+    //    let list = QObjectPinned::new(&wallpapers.borrow().list);
+    //    engine.set_object_property("wallpaperList".into(), list);
+    //}
+    engine.set_object_property("wallpapers".into(), wallpapers);
+
     let engine = &mut engine;
     unsafe {
         cpp!([] {
