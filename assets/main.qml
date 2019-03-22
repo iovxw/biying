@@ -19,7 +19,7 @@ ApplicationWindow {
         anchors.fill: parent
         flickableDirection: Flickable.VerticalFlick
         boundsBehavior: Flickable.DragOverBounds
-        contentHeight: grid.height
+        contentHeight: column.height
         ScrollBar.vertical: ScrollBar { }
 
         Component.onCompleted: {
@@ -33,32 +33,46 @@ ApplicationWindow {
             wallpapers.fetch_next_page()
         }
 
-        Grid {
-            id: grid
-            columns: parent.width / previewW
-            anchors.horizontalCenter: parent.horizontalCenter
+        Column {
+            id: column
+            width: parent.width
 
-            Repeater {
-                model: wallpapers.list
+            Grid {
+                columns: parent.width / previewW
+                anchors.horizontalCenter: parent.horizontalCenter
 
-                delegate: Rectangle {
-                    height: previewH
-                    width: previewW
-                    color: Qt.rgba(Math.random(), Math.random(), Math.random(), Math.random())
+                Repeater {
+                    model: wallpapers.list
 
-                    Image {
-                        anchors.fill: parent
-                        source: model.preview
+                    delegate: Rectangle {
+                        height: previewH
+                        width: previewW
+                        color: Qt.rgba(Math.random(), Math.random(), Math.random(), Math.random())
 
-                        MouseArea {
+                        BusyIndicator {
+                            height: 64
+                            anchors.centerIn: parent
+                        }
+
+                        Image {
                             anchors.fill: parent
-                            onClicked: {
-                                model.like = !model.like;
-                                console.log("like:", index, model.like)
+                            source: model.preview
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    model.like = !model.like;
+                                    console.log("like:", index, model.like)
+                                }
                             }
                         }
                     }
                 }
+            }
+
+            BusyIndicator {
+                height: 64
+                anchors.horizontalCenter: parent.horizontalCenter
             }
         }
     }
