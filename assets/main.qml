@@ -1,6 +1,6 @@
 import QtQuick 2.8
 import QtQuick.Layouts 1.3
-import QtQuick.Controls 2.1
+import QtQuick.Controls 2.3
 import QtGraphicalEffects 1.0
 
 ApplicationWindow {
@@ -58,7 +58,7 @@ ApplicationWindow {
                         color: Qt.rgba(Math.random(), Math.random(), Math.random(), 0.3)
 
                         BusyIndicator {
-                            height: 64
+                            height: parent.height / 2
                             anchors.centerIn: parent
                         }
 
@@ -66,12 +66,16 @@ ApplicationWindow {
                             anchors.fill: parent
                             source: model.preview
 
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: {
-                                    model.like = !model.like;
-                                    console.log("like:", index, model.like)
-                                }
+                            Button {
+                                height: parent.height / 4
+                                width: height
+                                icon.name: "emblem-favorite-symbolic"
+                                icon.color: if (model.like) { "red" } else { "white"  }
+                                icon.width: width
+                                icon.height: height
+                                anchors.right: parent.right
+                                anchors.bottom: parent.bottom
+                                onClicked: model.like = !model.like
                             }
                         }
                     }
@@ -79,7 +83,7 @@ ApplicationWindow {
             }
 
             BusyIndicator {
-                height: 64
+                height: previewH / 2
                 anchors.horizontalCenter: parent.horizontalCenter
             }
         }
