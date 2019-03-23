@@ -7,6 +7,7 @@ ApplicationWindow {
     property int previewH: 480/3
     property int previewW: 800/3
 
+    id: window
     visible: true
     //: Window title
     title: qsTr("Biying Wallpaper")
@@ -18,7 +19,11 @@ ApplicationWindow {
 
     background: FastBlur {
         source: Image {
+            id: windowBkgImg
+            width: window.width
+            height: window.height
             source: "background.png"
+            fillMode: Image.PreserveAspectCrop
         }
         radius: 64
     }
@@ -66,6 +71,13 @@ ApplicationWindow {
                             anchors.fill: parent
                             source: model.preview
 
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    popup.open()
+                                }
+                            }
+
                             Button {
                                 height: parent.height / 4
                                 width: height
@@ -73,6 +85,53 @@ ApplicationWindow {
                                 icon.color: if (model.like) { "red" } else { "white"  }
                                 icon.width: width
                                 icon.height: height
+                                anchors.right: parent.right
+                                anchors.bottom: parent.bottom
+                                onClicked: model.like = !model.like
+                            }
+                        }
+
+                        Popup {
+                            id: popup
+                            width: window.width
+                            height: window.height
+                            anchors.centerIn: Overlay.overlay
+                            background: FastBlur {
+                                source: Image {
+                                    width: popup.width
+                                    height: popup.height
+                                    source: model.preview
+                                    fillMode: Image.PreserveAspectCrop
+                                }
+                                radius: 128
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    popup.close()
+                                }
+                            }
+
+                            Image {
+                                height: parent.height - popupBtn1.height - popup.padding
+                                width: parent.width
+                                fillMode: Image.PreserveAspectFit
+                                source: model.preview
+                            }
+
+                            Button {
+                                id: popupBtn1
+                                text: qsTr("Set as Wallpaper")
+                                anchors.right: popupBtn2.left
+                                anchors.bottom: parent.bottom
+                                anchors.rightMargin: 5
+                            }
+
+                            Button {
+                                id: popupBtn2
+                                icon.name: "emblem-favorite-symbolic"
+                                icon.color: if (model.like) { "red" } else { "white"  }
                                 anchors.right: parent.right
                                 anchors.bottom: parent.bottom
                                 onClicked: model.like = !model.like
