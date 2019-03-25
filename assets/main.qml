@@ -28,12 +28,13 @@ ApplicationWindow {
         radius: 64
     }
 
-    Flickable {
-        anchors.fill: parent
-        flickableDirection: Flickable.VerticalFlick
-        boundsBehavior: Flickable.DragOverBounds
-        contentHeight: column.height
-        ScrollBar.vertical: ScrollBar { }
+    GridView {
+        cellHeight: previewH
+        cellWidth: previewW
+        width: Math.floor(parent.width / previewW) * previewW
+        height: parent.height
+        anchors.horizontalCenter: parent.horizontalCenter
+        model: wallpapers.list
 
         Component.onCompleted: {
             wallpapers.fetch_next_page()
@@ -46,105 +47,91 @@ ApplicationWindow {
             wallpapers.fetch_next_page()
         }
 
-        Column {
-            id: column
-            width: parent.width
+        delegate: Rectangle {
+            height: previewH
+            width: previewW
+            color: Qt.rgba(Math.random(), Math.random(), Math.random(), 0.3)
 
-            Grid {
-                columns: parent.width / previewW
-                anchors.horizontalCenter: parent.horizontalCenter
+            BusyIndicator {
+                height: parent.height / 2
+                anchors.centerIn: parent
+            }
 
-                Repeater {
-                    model: wallpapers.list
+            Image {
+                anchors.fill: parent
+                source: model.preview
 
-                    delegate: Rectangle {
-                        height: previewH
-                        width: previewW
-                        color: Qt.rgba(Math.random(), Math.random(), Math.random(), 0.3)
-
-                        BusyIndicator {
-                            height: parent.height / 2
-                            anchors.centerIn: parent
-                        }
-
-                        Image {
-                            anchors.fill: parent
-                            source: model.preview
-
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: {
-                                    popup.open()
-                                }
-                            }
-
-                            Button {
-                                height: parent.height / 4
-                                width: height
-                                icon.name: "emblem-favorite-symbolic"
-                                icon.color: if (model.like) { "red" } else { "white"  }
-                                icon.width: width
-                                icon.height: height
-                                anchors.right: parent.right
-                                anchors.bottom: parent.bottom
-                                onClicked: model.like = !model.like
-                            }
-                        }
-
-                        Popup {
-                            id: popup
-                            width: window.width
-                            height: window.height
-                            anchors.centerIn: Overlay.overlay
-                            background: FastBlur {
-                                source: Image {
-                                    width: popup.width
-                                    height: popup.height
-                                    source: model.preview
-                                    fillMode: Image.PreserveAspectCrop
-                                }
-                                radius: 128
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: {
-                                    popup.close()
-                                }
-                            }
-
-                            Image {
-                                height: parent.height - popupBtn1.height - popup.padding
-                                width: parent.width
-                                fillMode: Image.PreserveAspectFit
-                                source: model.preview
-                            }
-
-                            Button {
-                                id: popupBtn1
-                                text: qsTr("Set as Wallpaper")
-                                anchors.right: popupBtn2.left
-                                anchors.bottom: parent.bottom
-                                anchors.rightMargin: 5
-                            }
-
-                            Button {
-                                id: popupBtn2
-                                icon.name: "emblem-favorite-symbolic"
-                                icon.color: if (model.like) { "red" } else { "white"  }
-                                anchors.right: parent.right
-                                anchors.bottom: parent.bottom
-                                onClicked: model.like = !model.like
-                            }
-                        }
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        popup.open()
                     }
+                }
+
+                Button {
+                    height: parent.height / 4
+                    width: height
+                    icon.name: "emblem-favorite-symbolic"
+                    icon.color: if (model.like) { "red" } else { "white"  }
+                    icon.width: width
+                    icon.height: height
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    onClicked: model.like = !model.like
                 }
             }
 
-            BusyIndicator {
-                height: previewH / 2
-                anchors.horizontalCenter: parent.horizontalCenter
+            Popup {
+                id: popup
+                width: window.width
+                height: window.height
+                anchors.centerIn: Overlay.overlay
+                background: FastBlur {
+                    source: Image {
+                        width: popup.width
+                        height: popup.height
+                        source: model.preview
+                        fillMode: Image.PreserveAspectCrop
+                    }
+                    radius: 128
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        popup.close()
+                    }
+                }
+
+                Image {
+                    height: parent.height - popupBtn1.height - popup.padding
+                    width: parent.width
+                    fillMode: Image.PreserveAspectFit
+                    source: model.preview
+                }
+
+                Button {
+                    id: popupBtn1
+                    text: qsTr("Set as Wallpaper")
+                    anchors.right: popupBtn2.left
+                    anchors.bottom: parent.bottom
+                    anchors.rightMargin: 5
+                }
+
+                Button {
+                    id: popupBtn2
+                    icon.name: "emblem-favorite-symbolic"
+                    icon.color: if (model.like) { "red" } else { "white"  }
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    onClicked: model.like = !model.like
+                }
             }
+        }
+
+        footer: BusyIndicator {
+            height: 60
+            width: parent.width
         }
     }
 }
