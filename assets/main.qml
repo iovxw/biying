@@ -63,8 +63,9 @@ ApplicationWindow {
 
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: if (true){//parent.status == Image.Ready) {
+                    onClicked: if (parent.status == Image.Ready) {
                         popup.open()
+                        wallpapers.download(index)
                     }
                 }
 

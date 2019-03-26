@@ -22,6 +22,7 @@ pub struct Wallpapers {
     pub list: qt_property!(RefCell<MutListModel<QWallpaper>>; NOTIFY list_changed),
     pub list_changed: qt_signal!(),
     pub fetch_next_page: qt_method!(fn (&self)),
+    pub download: qt_method!(fn (&mut self, index: usize)),
     config: Rc<RefCell<Config>>,
     offset: usize,
 }
@@ -40,9 +41,7 @@ impl Wallpapers {
             ptr.as_ref().map(|p| {
                 let mutp = unsafe { &mut *(p as *const _ as *mut Self) };
                 for v in v {
-                    let mut wallpaper: QWallpaper = (&v).into();
-                    wallpaper.config = p.config.clone();
-                    mutp.list.borrow_mut().push(wallpaper);
+                    mutp.list.borrow_mut().push((&v).into());
                 }
                 p.list_changed();
             });
@@ -57,6 +56,32 @@ impl Wallpapers {
             Ok(r) => ok_callback(r),
             Err(e) => err_callback(e.to_string().into()),
         });
+    }
+
+    pub fn download(&mut self, index: usize) {
+        let ptr = QPointer::from(&*self);
+        let ok_callback = queued_callback(move |v: String| {
+            ptr.as_ref().map(|p| {
+                let mutp = unsafe { &mut *(p as *const _ as *mut Self) };
+                mutp.list.borrow_mut()[index].image = v.into();
+                let idx = (&mut *mutp.list.borrow_mut() as &mut QAbstractListModel)
+                    .row_index(index as i32);
+                (&mut *mutp.list.borrow_mut() as &mut QAbstractListModel).data_changed(idx, idx);
+            });
+        });
+        let ptr = QPointer::from(&*self);
+        let err_callback = queued_callback(move |e: String| eprintln!("{}", e));
+        let wp = &self.list.borrow()[index];
+        let id = wp.id.clone();
+        let urlbase = wp.urlbase.clone();
+        let resolution = "1920x1080";
+        let download_dir = self.config.borrow().download_dir.clone();
+        thread::spawn(
+            move || match download_image(&id, &urlbase, resolution, &download_dir) {
+                Ok(path) => ok_callback(path),
+                Err(e) => err_callback(e.to_string()),
+            },
+        );
     }
 }
 
@@ -123,19 +148,15 @@ struct RawImage {
     metas: Vec<ImageMeta>,
 }
 
-#[derive(Default, QObject)]
+#[derive(Default)]
 pub struct QWallpaper {
-    base: qt_base_class!(trait QObject),
     pub name: qt_property!(QString),
     pub preview: qt_property!(QString),
     pub copyright: qt_property!(QString),
     pub metas: qt_property!(QVariantList),
     pub wp: qt_property!(bool),
-    pub like: qt_property!(bool; NOTIFY like_changed WRITE set_like),
-    pub like_changed: qt_signal!(),
-    pub image: qt_property!(QString; NOTIFY image_changed READ download),
-    pub image_changed: qt_signal!(),
-    config: Rc<RefCell<Config>>,
+    pub like: qt_property!(bool),
+    pub image: qt_property!(QString),
     id: String,
     urlbase: String,
 }
@@ -183,31 +204,6 @@ impl QWallpaper {
     fn set_like(&mut self, val: bool) {
         println!("like! {}", val)
     }
-
-    fn download(&mut self) -> QString {
-        println!("start!");
-        let ptr = QPointer::from(&*self);
-        let ok_callback = queued_callback(move |v: String| {
-            ptr.as_ref().map(|p| {
-                let mutp = unsafe { &mut *(p as *const _ as *mut Self) };
-                mutp.image = v.into();
-                p.image_changed();
-            });
-        });
-        let ptr = QPointer::from(&*self);
-        let err_callback = queued_callback(move |e: String| {});
-        let id = self.id.clone();
-        let urlbase = self.urlbase.clone();
-        let resolution = "1920x1080";
-        let download_dir = self.config.borrow().download_dir.clone();
-        thread::spawn(
-            move || match download_image(&id, &urlbase, resolution, &download_dir) {
-                Ok(path) => ok_callback(path),
-                Err(e) => err_callback(e.to_string()),
-            },
-        );
-        QString::default()
-    }
 }
 
 fn download_image(
@@ -216,18 +212,18 @@ fn download_image(
     resolution: &str,
     output_dir: &PathBuf,
 ) -> Result<String, failure::Error> {
-    let mut r = reqwest::get(&format!(
-        "https://wpdn.bohan.co{}_{}.jpg",
-        urlbase, resolution
-    ))?;
-    if !r.status().is_success() {
-        return Err(format_err!("Server Error: {}", r.status()));
-    }
-    if !output_dir.exists() {
-        fs::create_dir_all(&output_dir)?;
-    }
-    let output = output_dir.with_file_name(format!("{}_{}.jpg", id, resolution));
+    let output = output_dir.join(format!("{}_{}.jpg", id, resolution));
     if !output.exists() {
+        let mut r = reqwest::get(&format!(
+            "https://wpdn.bohan.co{}_{}.jpg",
+            urlbase, resolution
+        ))?;
+        if !r.status().is_success() {
+            return Err(format_err!("Server Error: {}", r.status()));
+        }
+        if !output_dir.exists() {
+            fs::create_dir_all(&output_dir)?;
+        }
         let mut file = fs::File::create(&output)?;
         r.copy_to(&mut file)?;
     }
