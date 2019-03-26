@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::iter::FromIterator;
 use std::ops::Try;
+use std::rc::Rc;
 use std::thread;
 
 use chrono::prelude::*;
@@ -9,6 +10,7 @@ use qmetaobject::*;
 use reqwest;
 use serde::Deserialize;
 
+use crate::config::Config;
 use crate::listmodel::{MutListItem, MutListModel};
 
 #[derive(QObject, Default)]
@@ -18,10 +20,18 @@ pub struct Wallpapers {
     pub list: qt_property!(RefCell<MutListModel<QWallpaper>>; NOTIFY list_changed),
     pub list_changed: qt_signal!(),
     pub fetch_next_page: qt_method!(fn (&self)),
+    config: Rc<RefCell<Config>>,
     offset: usize,
 }
 
 impl Wallpapers {
+    pub fn new() -> Self {
+        Self {
+            config: Rc::new(RefCell::new(Config::open().unwrap_or_default())),
+            ..Default::default()
+        }
+    }
+
     pub fn fetch_next_page(&mut self) {
         let ptr = QPointer::from(&*self);
         let ok_callback = queued_callback(move |v: Vec<RawImage>| {
@@ -119,6 +129,7 @@ pub struct QWallpaper {
     pub wp: qt_property!(bool),
     pub like: qt_property!(bool; NOTIFY like_changed WRITE set_like),
     pub like_changed: qt_signal!(),
+    pub download: qt_method!(fn (&mut self)),
 }
 
 impl MutListItem for QWallpaper {
@@ -164,6 +175,8 @@ impl QWallpaper {
     fn set_like(&mut self, val: bool) {
         println!("like! {}", val)
     }
+
+    fn download(&mut self) {}
 }
 
 impl From<&RawImage> for QWallpaper {

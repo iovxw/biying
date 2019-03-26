@@ -1,11 +1,13 @@
 #![feature(type_alias_enum_variants)]
 #![feature(try_trait)]
+#![feature(result_map_or_else)]
 
 use cpp::*;
 use qmetaobject::*;
 
 mod implementation;
 mod listmodel;
+mod config;
 
 cpp! {{
     #include <QtCore/QTranslator>
@@ -26,13 +28,10 @@ fn main() {
     init_ressource();
     let mut engine = QmlEngine::new();
 
-    let wallpapers = implementation::Wallpapers::default();
+    let wallpapers = implementation::Wallpapers::new();
     let wallpapers = QObjectBox::new(wallpapers);
     let wallpapers = wallpapers.pinned();
-    //unsafe {
-    //    let list = QObjectPinned::new(&wallpapers.borrow().list);
-    //    engine.set_object_property("wallpaperList".into(), list);
-    //}
+
     engine.set_object_property("wallpapers".into(), wallpapers);
 
     let engine = &mut engine;
