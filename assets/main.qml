@@ -63,7 +63,7 @@ ApplicationWindow {
 
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: {
+                    onClicked: if (parent.status == Image.Ready) {
                         popup.open()
                     }
                 }
