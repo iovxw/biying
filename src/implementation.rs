@@ -1,11 +1,13 @@
 use std::cell::RefCell;
+use std::fs;
 use std::iter::FromIterator;
 use std::ops::Try;
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::thread;
 
 use chrono::prelude::*;
-use failure::{self, Fail};
+use failure::{self, format_err, Fail};
 use qmetaobject::*;
 use reqwest;
 use serde::Deserialize;
@@ -36,9 +38,11 @@ impl Wallpapers {
         let ptr = QPointer::from(&*self);
         let ok_callback = queued_callback(move |v: Vec<RawImage>| {
             ptr.as_ref().map(|p| {
-                let mutp = unsafe { &mut *(p as *const _ as *mut Wallpapers) };
+                let mutp = unsafe { &mut *(p as *const _ as *mut Self) };
                 for v in v {
-                    mutp.list.borrow_mut().push((&v).into());
+                    let mut wallpaper: QWallpaper = (&v).into();
+                    wallpaper.config = p.config.clone();
+                    mutp.list.borrow_mut().push(wallpaper);
                 }
                 p.list_changed();
             });
@@ -119,17 +123,21 @@ struct RawImage {
     metas: Vec<ImageMeta>,
 }
 
-#[derive(Default)]
+#[derive(Default, QObject)]
 pub struct QWallpaper {
+    base: qt_base_class!(trait QObject),
     pub name: qt_property!(QString),
     pub preview: qt_property!(QString),
     pub copyright: qt_property!(QString),
-    pub id: qt_property!(QString),
     pub metas: qt_property!(QVariantList),
     pub wp: qt_property!(bool),
     pub like: qt_property!(bool; NOTIFY like_changed WRITE set_like),
     pub like_changed: qt_signal!(),
-    pub download: qt_method!(fn (&mut self)),
+    pub image: qt_property!(QString; NOTIFY image_changed READ download),
+    pub image_changed: qt_signal!(),
+    config: Rc<RefCell<Config>>,
+    id: String,
+    urlbase: String,
 }
 
 impl MutListItem for QWallpaper {
@@ -138,10 +146,10 @@ impl MutListItem for QWallpaper {
             0 => QMetaType::to_qvariant(&self.name),
             1 => QMetaType::to_qvariant(&self.preview),
             2 => QMetaType::to_qvariant(&self.copyright),
-            3 => QMetaType::to_qvariant(&self.id),
-            4 => QMetaType::to_qvariant(&self.metas),
-            5 => QMetaType::to_qvariant(&self.wp),
-            6 => QMetaType::to_qvariant(&self.like),
+            3 => QMetaType::to_qvariant(&self.metas),
+            4 => QMetaType::to_qvariant(&self.wp),
+            5 => QMetaType::to_qvariant(&self.like),
+            6 => QMetaType::to_qvariant(&self.image),
             _ => QVariant::default(),
         }
     }
@@ -150,10 +158,10 @@ impl MutListItem for QWallpaper {
             0 => <_>::from_qvariant(value.clone()).map(|v| self.name = v),
             1 => <_>::from_qvariant(value.clone()).map(|v| self.preview = v),
             2 => <_>::from_qvariant(value.clone()).map(|v| self.copyright = v),
-            3 => <_>::from_qvariant(value.clone()).map(|v| self.id = v),
-            4 => <_>::from_qvariant(value.clone()).map(|v| self.metas = v),
-            5 => <_>::from_qvariant(value.clone()).map(|v| self.wp = v),
-            6 => <_>::from_qvariant(value.clone()).map(|v| self.like = v),
+            3 => <_>::from_qvariant(value.clone()).map(|v| self.metas = v),
+            4 => <_>::from_qvariant(value.clone()).map(|v| self.wp = v),
+            5 => <_>::from_qvariant(value.clone()).map(|v| self.like = v),
+            6 => <_>::from_qvariant(value.clone()).map(|v| self.image = v),
             _ => None,
         }
         .is_some()
@@ -163,10 +171,10 @@ impl MutListItem for QWallpaper {
             QByteArray::from("name"),
             QByteArray::from("preview"),
             QByteArray::from("copyright"),
-            QByteArray::from("id"),
             QByteArray::from("metas"),
             QByteArray::from("wp"),
             QByteArray::from("like"),
+            QByteArray::from("image"),
         ]
     }
 }
@@ -176,7 +184,54 @@ impl QWallpaper {
         println!("like! {}", val)
     }
 
-    fn download(&mut self) {}
+    fn download(&mut self) -> QString {
+        println!("start!");
+        let ptr = QPointer::from(&*self);
+        let ok_callback = queued_callback(move |v: String| {
+            ptr.as_ref().map(|p| {
+                let mutp = unsafe { &mut *(p as *const _ as *mut Self) };
+                mutp.image = v.into();
+                p.image_changed();
+            });
+        });
+        let ptr = QPointer::from(&*self);
+        let err_callback = queued_callback(move |e: String| {});
+        let id = self.id.clone();
+        let urlbase = self.urlbase.clone();
+        let resolution = "1920x1080";
+        let download_dir = self.config.borrow().download_dir.clone();
+        thread::spawn(
+            move || match download_image(&id, &urlbase, resolution, &download_dir) {
+                Ok(path) => ok_callback(path),
+                Err(e) => err_callback(e.to_string()),
+            },
+        );
+        QString::default()
+    }
+}
+
+fn download_image(
+    id: &str,
+    urlbase: &str,
+    resolution: &str,
+    output_dir: &PathBuf,
+) -> Result<String, failure::Error> {
+    let mut r = reqwest::get(&format!(
+        "https://wpdn.bohan.co{}_{}.jpg",
+        urlbase, resolution
+    ))?;
+    if !r.status().is_success() {
+        return Err(format_err!("Server Error: {}", r.status()));
+    }
+    if !output_dir.exists() {
+        fs::create_dir_all(&output_dir)?;
+    }
+    let output = output_dir.with_file_name(format!("{}_{}.jpg", id, resolution));
+    if !output.exists() {
+        let mut file = fs::File::create(&output)?;
+        r.copy_to(&mut file)?;
+    }
+    Ok(output.to_string_lossy().into())
 }
 
 impl From<&RawImage> for QWallpaper {
@@ -185,7 +240,6 @@ impl From<&RawImage> for QWallpaper {
             name: v.name.as_str().into(),
             preview: format!("https://wpdn.bohan.co{}_800x480.jpg", v.urlbase).into(),
             copyright: v.copyright.as_str().into(),
-            id: v.object_id.as_str().into(),
             metas: QVariantList::from_iter(
                 v.metas
                     .iter()
@@ -193,6 +247,8 @@ impl From<&RawImage> for QWallpaper {
                     .map(|v| v.to_qvariant()),
             ),
             wp: v.wp,
+            id: v.object_id.clone(),
+            urlbase: v.urlbase.clone(),
             ..QWallpaper::default()
         }
     }

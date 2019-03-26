@@ -1,3 +1,5 @@
+use std::ops::{Deref, DerefMut};
+
 use qmetaobject::*;
 
 pub trait MutListItem {
@@ -16,6 +18,19 @@ pub struct MutListModel<T: MutListItem + 'static> {
     #[qt_base_class = "QAbstractListModel"]
     base: QObjectCppWrapper,
     values: Vec<T>,
+}
+
+impl<T: MutListItem> Deref for MutListModel<T> {
+    type Target = [T];
+    fn deref(&self) -> &Self::Target {
+        &self.values
+    }
+}
+
+impl<T: MutListItem> DerefMut for MutListModel<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.values
+    }
 }
 
 impl<T: MutListItem> MutListModel<T> {

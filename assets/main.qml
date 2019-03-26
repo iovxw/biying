@@ -63,7 +63,7 @@ ApplicationWindow {
 
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: if (parent.status == Image.Ready) {
+                    onClicked: if (true){//parent.status == Image.Ready) {
                         popup.open()
                     }
                 }
@@ -103,11 +103,17 @@ ApplicationWindow {
                     }
                 }
 
+                BusyIndicator {
+                    height: parent.height / 2
+                    anchors.centerIn: parent
+                }
+
                 Image {
                     height: parent.height - popupBtn1.height - popup.padding
                     width: parent.width
                     fillMode: Image.PreserveAspectFit
-                    source: model.preview
+                    source: model.image
+                    visible: model.image
                 }
 
                 Button {
