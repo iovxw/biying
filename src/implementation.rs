@@ -3,7 +3,6 @@ use std::fs;
 use std::iter::FromIterator;
 use std::ops::Try;
 use std::path::PathBuf;
-use std::rc::Rc;
 use std::thread;
 
 use chrono::prelude::*;
@@ -23,14 +22,15 @@ pub struct Wallpapers {
     pub list_changed: qt_signal!(),
     pub fetch_next_page: qt_method!(fn (&self)),
     pub download: qt_method!(fn (&mut self, index: usize)),
-    config: Rc<RefCell<Config>>,
+    pub like: qt_method!(fn (&mut self, index: usize)),
+    config: Config,
     offset: usize,
 }
 
 impl Wallpapers {
     pub fn new() -> Self {
         Self {
-            config: Rc::new(RefCell::new(Config::open().unwrap_or_default())),
+            config: Config::open().unwrap_or_default(),
             ..Default::default()
         }
     }
@@ -41,7 +41,9 @@ impl Wallpapers {
             ptr.as_ref().map(|p| {
                 let mutp = unsafe { &mut *(p as *const _ as *mut Self) };
                 for v in v {
-                    mutp.list.borrow_mut().push((&v).into());
+                    let mut wallpaper: QWallpaper = (&v).into();
+                    wallpaper.like = p.config.likes.contains(&wallpaper.id);
+                    mutp.list.borrow_mut().push(wallpaper);
                 }
                 p.list_changed();
             });
@@ -75,13 +77,26 @@ impl Wallpapers {
         let id = wp.id.clone();
         let urlbase = wp.urlbase.clone();
         let resolution = "1920x1080";
-        let download_dir = self.config.borrow().download_dir.clone();
+        let download_dir = self.config.download_dir.clone();
         thread::spawn(
             move || match download_image(&id, &urlbase, resolution, &download_dir) {
                 Ok(path) => ok_callback(path),
                 Err(e) => err_callback(e.to_string()),
             },
         );
+    }
+
+    pub fn like(&mut self, index: usize) {
+        let wallpapers = &mut *self.list.borrow_mut();
+        wallpapers[index].like = !wallpapers[index].like;
+        if wallpapers[index].like {
+            self.config.likes.insert(wallpapers[index].id.clone());
+        } else {
+            self.config.likes.remove(&wallpapers[index].id);
+        }
+        self.config.save().expect("Failed to save config!");
+        let idx = (wallpapers as &mut QAbstractListModel).row_index(index as i32);
+        (wallpapers as &mut QAbstractListModel).data_changed(idx, idx);
     }
 }
 

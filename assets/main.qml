@@ -78,7 +78,7 @@ ApplicationWindow {
                     icon.height: height
                     anchors.right: parent.right
                     anchors.bottom: parent.bottom
-                    onClicked: model.like = !model.like
+                    onClicked: wallpapers.like(index)
                 }
             }
 
@@ -131,7 +131,7 @@ ApplicationWindow {
                     icon.color: if (model.like) { "red" } else { "white"  }
                     anchors.right: parent.right
                     anchors.bottom: parent.bottom
-                    onClicked: model.like = !model.like
+                    onClicked: wallpapers.like(index)
                 }
             }
         }

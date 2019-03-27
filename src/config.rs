@@ -36,7 +36,7 @@ impl Default for Config {
 
 impl Config {
     pub fn open() -> Result<Self, failure::Error> {
-        let mut f = fs::File::open(Self::config_dir().join(env!("CARGO_PKG_NAME")))?;
+        let mut f = fs::File::open(Self::config_dir().join("config.toml"))?;
         let mut s = String::new();
         f.read_to_string(&mut s)?;
         let config = toml::from_str(&s)?;
@@ -48,7 +48,7 @@ impl Config {
         if !path.exists() {
             fs::create_dir_all(&path)?;
         }
-        let mut f = fs::File::create(path.join(env!("CARGO_PKG_NAME")))?;
+        let mut f = fs::File::create(path.join("config.toml"))?;
         let mut v = toml::to_vec(self)?;
         f.write_all(&mut v)?;
         Ok(())
