@@ -97,6 +97,71 @@ ApplicationWindow {
                     radius: 128
                 }
 
+                BusyIndicator {
+                    height: 60
+                    anchors.centerIn: parent
+                    visible: !model.image
+                }
+
+                Image {
+                    id: wallpaperImage
+                    height: parent.height - popupBtn1.height - popup.padding
+                    width: parent.width
+                    fillMode: Image.PreserveAspectFit
+                    source: model.image
+                    visible: model.image
+
+                    MouseArea {
+                        id: wallpaperImageArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                    }
+
+                    Rectangle {
+                        height: childrenRect.height + popup.padding
+                        width: childrenRect.width + popup.padding
+                        anchors.right: infolist.right
+                        anchors.top: parent.top
+                        anchors.topMargin: (parent.height - parent.paintedHeight) / 2
+                        color: infolist.color
+                        visible: infolist.visible
+
+                        Text {
+                            x: popup.padding / 2
+                            y: popup.padding / 2
+                            color: "white"
+                            text: "© " + model.copyright
+                        }
+                    }
+
+                    Rectangle {
+                        id: infolist
+                        height: parent.paintedHeight * 0.2
+                        width: parent.paintedWidth
+                        anchors.left: parent.left
+                        anchors.bottom: parent.bottom
+                        anchors.leftMargin: (parent.width - parent.paintedWidth) / 2
+                        anchors.bottomMargin: (parent.height - parent.paintedHeight) / 2
+                        color: Qt.rgba(0, 0, 0, 0.3)
+                        visible: wallpaperImageArea.containsMouse
+
+                        ListView {
+                            id: x
+                            model: ListModel {}
+                            anchors.fill: parent
+                            anchors.margins: popup.padding
+                            clip: true
+                            delegate: Text {
+                                color: "white"
+                                text: model.market + ": " + model.info
+                            }
+                        }
+                        Component.onCompleted: {
+                            x.model.append(model.metas)
+                        }
+                    }
+                }
+
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {
@@ -104,25 +169,12 @@ ApplicationWindow {
                     }
                 }
 
-                BusyIndicator {
-                    height: parent.height / 2
-                    anchors.centerIn: parent
-                }
-
-                Image {
-                    height: parent.height - popupBtn1.height - popup.padding
-                    width: parent.width
-                    fillMode: Image.PreserveAspectFit
-                    source: model.image
-                    visible: model.image
-                }
-
                 Button {
                     id: popupBtn1
                     text: qsTr("Set as Wallpaper")
                     anchors.right: popupBtn2.left
                     anchors.bottom: parent.bottom
-                    anchors.rightMargin: 5
+                    anchors.rightMargin: popup.padding / 2
                 }
 
                 Button {

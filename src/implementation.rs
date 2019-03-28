@@ -215,12 +215,6 @@ impl MutListItem for QWallpaper {
     }
 }
 
-impl QWallpaper {
-    fn set_like(&mut self, val: bool) {
-        println!("like! {}", val)
-    }
-}
-
 fn download_image(
     id: &str,
     urlbase: &str,
