@@ -146,8 +146,9 @@ ApplicationWindow {
                         visible: wallpaperImageArea.containsMouse
 
                         ListView {
-                            id: x
-                            model: ListModel {}
+                            model: ListModel {
+                                id: infoModel
+                            }
                             anchors.fill: parent
                             anchors.margins: popup.padding
                             clip: true
@@ -157,7 +158,8 @@ ApplicationWindow {
                             }
                         }
                         Component.onCompleted: {
-                            x.model.append(model.metas)
+                            // a workaround
+                            infoModel.append(model.metas)
                         }
                     }
                 }

@@ -18,8 +18,7 @@ use crate::listmodel::{MutListItem, MutListModel};
 pub struct Wallpapers {
     base: qt_base_class!(trait QObject),
     pub error: qt_signal!(err: QString),
-    pub list: qt_property!(RefCell<MutListModel<QWallpaper>>; NOTIFY list_changed),
-    pub list_changed: qt_signal!(),
+    pub list: qt_property!(RefCell<MutListModel<QWallpaper>>; CONST),
     pub fetch_next_page: qt_method!(fn (&self)),
     pub download: qt_method!(fn (&mut self, index: usize)),
     pub like: qt_method!(fn (&mut self, index: usize)),
@@ -45,7 +44,6 @@ impl Wallpapers {
                     wallpaper.like = p.config.likes.contains(&wallpaper.id);
                     mutp.list.borrow_mut().push(wallpaper);
                 }
-                p.list_changed();
             });
         });
         let ptr = QPointer::from(&*self);
@@ -71,7 +69,6 @@ impl Wallpapers {
                 (&mut *mutp.list.borrow_mut() as &mut QAbstractListModel).data_changed(idx, idx);
             });
         });
-        let ptr = QPointer::from(&*self);
         let err_callback = queued_callback(move |e: String| eprintln!("{}", e));
         let wp = &self.list.borrow()[index];
         let id = wp.id.clone();
