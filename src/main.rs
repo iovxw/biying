@@ -19,6 +19,7 @@ cpp! {{
 qrc! { init_ressource,
      "/" {
          "assets/main.qml",
+         "assets/MainPage.qml",
          "assets/background.png",
          "assets/i18n/zh_CN.qm",
      },
@@ -41,6 +42,6 @@ fn main() {
             QApplication::installTranslator(&translator);
         });
     }
-    engine.load_file(":/assets/main.qml".into());
+    engine.load_file("qrc:/assets/main.qml".into());
     engine.exec();
 }

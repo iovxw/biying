@@ -63,7 +63,7 @@ impl Wallpapers {
         let ok_callback = queued_callback(move |v: String| {
             ptr.as_ref().map(|p| {
                 let mutp = unsafe { &mut *(p as *const _ as *mut Self) };
-                mutp.list.borrow_mut()[index].image = v.into();
+                mutp.list.borrow_mut()[index].image = ("file:".to_owned() + &v).into();
                 let idx = (&mut *mutp.list.borrow_mut() as &mut QAbstractListModel)
                     .row_index(index as i32);
                 (&mut *mutp.list.borrow_mut() as &mut QAbstractListModel).data_changed(idx, idx);
