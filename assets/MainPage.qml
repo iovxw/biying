@@ -13,6 +13,7 @@ GridView {
     height: parent.height
     anchors.horizontalCenter: parent.horizontalCenter
     model: wallpapers.list
+    clip: true
 
     Component.onCompleted: {
         wallpapers.fetch_next_page()
