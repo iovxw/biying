@@ -57,55 +57,94 @@ ApplicationWindow {
                 width: 600
                 anchors.horizontalCenter: parent.horizontalCenter
 
-                ColumnLayout {
+                ScrollView {
                     anchors.fill: parent
+                    contentWidth: width
+                    contentHeight: contentChildren[0].height
+                    anchors.rightMargin: 10
+                    anchors.leftMargin: 10
+                    clip: true
 
-                    GroupBox {
-                        Layout.fillWidth: true
-                        title: qsTr("Desktop Enviroment")
+                    ColumnLayout {
+                        width: parent.width
+                        spacing: 10
+                        GroupBox {
+                            Layout.fillWidth: true
+                            title: qsTr("Desktop Enviroment")
 
-                        ColumnLayout {
-                            width: parent.width
+                            ColumnLayout {
+                                width: parent.width
+                                ComboBox {
+                                    id: currentDE
+                                    Layout.fillWidth: true
+                                    model: ["GNOME", "KDE", "Xfce", "LXQt", "LXDE", "Cinnamon", "Deepin", "Budgie", "Enlightenment", "MATE", "Other"]
+                                }
 
-                            RadioButton {
-                                checked: true
-                                text: qsTr("GNOME")
+                                Label {
+                                    text: qsTr("Command to set wallpaper:")
+                                }
+
+                                TextField {
+                                    Layout.fillWidth: true
+                                    enabled: currentDE.currentIndex == currentDE.count - 1
+                                    selectByMouse: true
+                                    text: "command"
+                                }
                             }
-                            RadioButton {
-                                text: qsTr("KDE")
-                            }
-                            RadioButton {
-                                text: qsTr("Xfce")
-                            }
-                            RadioButton {
-                                text: qsTr("LXQt")
-                            }
-                            RadioButton {
-                                text: qsTr("LXDE")
-                            }
-                            RadioButton {
-                                text: qsTr("Cinnamon")
-                            }
-                            RadioButton {
-                                text: qsTr("Deepin")
-                            }
-                            RadioButton {
-                                text: qsTr("Budgie")
-                            }
-                            RadioButton {
-                                text: qsTr("Enlightenment")
-                            }
-                            RadioButton {
-                                text: qsTr("MATE")
-                            }
-                            RadioButton {
-                                id: customCommandBtn
-                                text: qsTr("Custom command")
-                            }
-                            TextField {
-                                Layout.fillWidth: true
-                                enabled: customCommandBtn.checked
-                                text: "command"
+                        }
+                        GroupBox {
+                            Layout.fillWidth: true
+                            title: qsTr("Automatically Change Wallpaper")
+                            GridLayout {
+                                width: parent.width
+                                rowSpacing: 10
+                                columns: 2
+                                Label {
+                                    text: qsTr("Enable")
+                                }
+                                Switch {
+                                    id: autoChangeWallpaperBtn
+                                    Layout.alignment: Qt.AlignRight
+                                }
+
+                                Label {
+                                    text: qsTr("Interval")
+                                }
+                                RowLayout {
+                                    Layout.alignment: Qt.AlignRight
+                                    SpinBox {
+                                        enabled: autoChangeWallpaperBtn.checked
+                                        value: 5
+                                        to: 999
+                                    }
+                                    Label {
+                                        text: qsTr("minuts")
+                                    }
+                                }
+
+                                GroupBox {
+                                    Layout.columnSpan: 2
+                                    Layout.fillWidth: true
+                                    title: qsTr("Mode")
+
+                                    RowLayout {
+                                        width: parent.width
+                                        enabled: autoChangeWallpaperBtn.checked
+                                        RadioButton {
+                                            Layout.alignment: Qt.AlignHCenter
+                                            checked: true
+                                            text: qsTr("Newest")
+                                        }
+                                        RadioButton {
+                                            Layout.alignment: Qt.AlignHCenter
+                                            text: qsTr("Favourites")
+                                        }
+                                        RadioButton {
+                                            Layout.alignment: Qt.AlignHCenter
+                                            text: qsTr("Random")
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
