@@ -9,9 +9,8 @@ GridView {
 
     cellHeight: previewH
     cellWidth: previewW
-    width: Math.floor(parent.width / previewW) * previewW
-    height: parent.height
-    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.fill: parent
+    anchors.leftMargin: (parent.width % previewW) / 2
     model: wallpapers.list
     clip: true
 
@@ -21,6 +20,8 @@ GridView {
             console.log("error:", err)
         })
     }
+
+    ScrollBar.vertical: ScrollBar { }
 
     onMovementEnded: if (atYEnd) {
         wallpapers.fetch_next_page()
