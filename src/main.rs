@@ -20,6 +20,7 @@ qrc! { init_ressource,
      "/" {
          "assets/main.qml",
          "assets/MainPage.qml",
+         "assets/SettingPage.qml",
          "assets/background.png",
          "assets/i18n/zh_CN.qm",
      },
