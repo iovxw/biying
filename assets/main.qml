@@ -28,7 +28,11 @@ ApplicationWindow {
     TabBar {
         id: bar
         width: parent.width
+        currentIndex: 1
 
+        TabButton {
+            text: qsTr("Favourites")
+        }
         TabButton {
             text: qsTr("Wallpapers")
         }
@@ -44,8 +48,21 @@ ApplicationWindow {
         anchors.top: bar.bottom
 
         Item {
-            MainPage {
+            WallpaperFlow {
+                model: wallpapers.favourites
+                onNextPage: {
+                    wallpapers.next_page_favourites()
+                }
+            }
+        }
+
+        Item {
+            WallpaperFlow {
                 id: mainPage
+                model: wallpapers.list
+                onNextPage: {
+                    wallpapers.fetch_next_page()
+                }
             }
         }
 

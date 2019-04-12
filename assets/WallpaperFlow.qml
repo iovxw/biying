@@ -11,11 +11,12 @@ GridView {
     cellWidth: previewW
     anchors.fill: parent
     anchors.leftMargin: (parent.width % previewW) / 2
-    model: wallpapers.list
     clip: true
 
+    signal nextPage
+
     Component.onCompleted: {
-        wallpapers.fetch_next_page()
+        nextPage()
         wallpapers.onError.connect(function(err) {
             console.log("error:", err)
         })
@@ -24,7 +25,7 @@ GridView {
     ScrollBar.vertical: ScrollBar { }
 
     onMovementEnded: if (atYEnd) {
-        wallpapers.fetch_next_page()
+        nextPage()
     }
 
     delegate: Rectangle {

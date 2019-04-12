@@ -19,11 +19,14 @@ pub struct Wallpapers {
     base: qt_base_class!(trait QObject),
     pub error: qt_signal!(err: QString),
     pub list: qt_property!(RefCell<MutListModel<QWallpaper>>; CONST),
+    pub favourites: qt_property!(RefCell<MutListModel<QWallpaper>>; CONST),
     pub fetch_next_page: qt_method!(fn (&self)),
+    pub next_page_favourites: qt_method!(fn (&self)),
     pub download: qt_method!(fn (&mut self, index: usize)),
     pub like: qt_method!(fn (&mut self, index: usize)),
     config: Config,
     offset: usize,
+    favourites_offset: usize,
 }
 
 impl Wallpapers {
@@ -53,6 +56,30 @@ impl Wallpapers {
         let offset = self.offset;
         self.offset += 20;
         thread::spawn(move || match fetch_wallpapers(offset, 20) {
+            Ok(r) => ok_callback(r),
+            Err(e) => err_callback(e.to_string().into()),
+        });
+    }
+
+    pub fn next_page_favourites(&mut self) {
+        let ptr = QPointer::from(&*self);
+        let ok_callback = queued_callback(move |v: Vec<RawImage>| {
+            ptr.as_ref().map(|p| {
+                let mutp = unsafe { &mut *(p as *const _ as *mut Self) };
+                for v in v {
+                    let mut wallpaper: QWallpaper = (&v).into();
+                    wallpaper.like = p.config.likes.contains(&wallpaper.id);
+                    mutp.favourites.borrow_mut().push(wallpaper);
+                }
+            });
+        });
+        let ptr = QPointer::from(&*self);
+        let err_callback = queued_callback(move |e: QString| {
+            ptr.as_ref().map(|p| p.error(e));
+        });
+        // FIXME: offset
+        let favourites: Vec<_> = self.config.likes.clone().into_iter().collect();
+        thread::spawn(move || match fetch_wallpapers_by_id(&favourites) {
             Ok(r) => ok_callback(r),
             Err(e) => err_callback(e.to_string().into()),
         });
@@ -274,19 +301,7 @@ impl From<&ImageMeta> for QWallpaperInfo {
 }
 
 fn fetch_wallpapers(offset: usize, limit: usize) -> Result<Vec<RawImage>, failure::Error> {
-    let mut headers = reqwest::header::HeaderMap::new();
-    headers.insert(
-        "X-AVOSCloud-Application-Id",
-        reqwest::header::HeaderValue::from_static(env!("AVOS_ID")),
-    );
-    headers.insert(
-        "X-AVOSCloud-Application-Key",
-        reqwest::header::HeaderValue::from_static(env!("AVOS_KEY")),
-    );
-    let client = reqwest::Client::builder()
-        .default_headers(headers)
-        .build()
-        .expect("build client");
+    let client = build_client();
 
     let offset = offset.to_string();
     let limit = limit.to_string();
@@ -301,8 +316,36 @@ fn fetch_wallpapers(offset: usize, limit: usize) -> Result<Vec<RawImage>, failur
     .expect("parse url");
 
     let resp: Response<RawImage> = client.get(url).send()?.json()?;
-    let mut images = resp?;
+    let images = resp?;
 
+    fill_wallpapers_metadata(&client, images)
+}
+
+fn fetch_wallpapers_by_id(id_list: &[String]) -> Result<Vec<RawImage>, failure::Error> {
+    let client = build_client();
+
+    let where_query: Vec<String> = id_list
+        .iter()
+        .map(|img| format!(r#"{{"objectId":"{}"}}"#, img))
+        .collect();
+    let where_query = format!("{{\"$or\":[{}]}}", where_query.join(","));
+
+    let url = reqwest::Url::parse_with_params(
+        "https://leancloud.cn/1.1/classes/Image",
+        &[("where", &where_query)],
+    )
+    .expect("parse url");
+
+    let resp: Response<RawImage> = client.get(url).send()?.json()?;
+    let images = resp?;
+
+    fill_wallpapers_metadata(&client, images)
+}
+
+fn fill_wallpapers_metadata(
+    client: &reqwest::Client,
+    mut images: Vec<RawImage>,
+) -> Result<Vec<RawImage>, failure::Error> {
     let where_query: Vec<String> = images
         .iter()
         .map(|img| {
@@ -333,4 +376,21 @@ fn fetch_wallpapers(offset: usize, limit: usize) -> Result<Vec<RawImage>, failur
     }
 
     Ok(images)
+}
+
+fn build_client() -> reqwest::Client {
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert(
+        "X-AVOSCloud-Application-Id",
+        reqwest::header::HeaderValue::from_static(env!("AVOS_ID")),
+    );
+    headers.insert(
+        "X-AVOSCloud-Application-Key",
+        reqwest::header::HeaderValue::from_static(env!("AVOS_KEY")),
+    );
+    let client = reqwest::Client::builder()
+        .default_headers(headers)
+        .build()
+        .expect("build client");
+    client
 }
