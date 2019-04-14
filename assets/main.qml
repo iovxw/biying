@@ -25,6 +25,12 @@ ApplicationWindow {
         radius: 64
     }
 
+    Component.onCompleted: {
+        wallpapers.onError.connect(function(err) {
+            console.log("error:", err)
+        })
+    }
+
     TabBar {
         id: bar
         width: parent.width
@@ -53,6 +59,12 @@ ApplicationWindow {
                 onNextPage: {
                     wallpapers.next_page_favourites()
                 }
+                onDownload: {
+                    wallpapers.download(index, true)
+                }
+                onLikeClicked: {
+                    wallpapers.like(index, true)
+                }
             }
         }
 
@@ -62,6 +74,12 @@ ApplicationWindow {
                 model: wallpapers.list
                 onNextPage: {
                     wallpapers.fetch_next_page()
+                }
+                onDownload: {
+                    wallpapers.download(index, false)
+                }
+                onLikeClicked: {
+                    wallpapers.like(index, false)
                 }
             }
         }

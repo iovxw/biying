@@ -13,14 +13,11 @@ GridView {
     anchors.leftMargin: (parent.width % previewW) / 2
     clip: true
 
-    signal nextPage
+    signal nextPage()
+    signal download(int index)
+    signal likeClicked(int index)
 
-    Component.onCompleted: {
-        nextPage()
-        wallpapers.onError.connect(function(err) {
-            console.log("error:", err)
-        })
-    }
+    Component.onCompleted: nextPage()
 
     ScrollBar.vertical: ScrollBar { }
 
@@ -46,7 +43,7 @@ GridView {
                 anchors.fill: parent
                 onClicked: if (parent.status == Image.Ready) {
                     popup.open()
-                    wallpapers.download(index)
+                    download(index)
                 }
             }
 
@@ -59,7 +56,7 @@ GridView {
                 icon.height: height
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                onClicked: wallpapers.like(index)
+                onClicked: likeClicked(index)
             }
         }
 
@@ -166,7 +163,7 @@ GridView {
                 icon.color: if (model.like) { "red" } else { "white"  }
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                onClicked: wallpapers.like(index)
+                onClicked: likeClicked(index)
             }
         }
     }

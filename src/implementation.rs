@@ -22,8 +22,8 @@ pub struct Wallpapers {
     pub favourites: qt_property!(RefCell<MutListModel<QWallpaper>>; CONST),
     pub fetch_next_page: qt_method!(fn (&self)),
     pub next_page_favourites: qt_method!(fn (&self)),
-    pub download: qt_method!(fn (&mut self, index: usize)),
-    pub like: qt_method!(fn (&mut self, index: usize)),
+    pub download: qt_method!(fn (&mut self, index: usize, in_favourites: bool)),
+    pub like: qt_method!(fn (&mut self, index: usize, in_favourites: bool)),
     config: Config,
     offset: usize,
     favourites_offset: usize,
@@ -77,7 +77,7 @@ impl Wallpapers {
         let err_callback = queued_callback(move |e: QString| {
             ptr.as_ref().map(|p| p.error(e));
         });
-        // FIXME: offset
+        // TODO: offset
         let favourites: Vec<_> = self.config.likes.clone().into_iter().collect();
         thread::spawn(move || match fetch_wallpapers_by_id(&favourites) {
             Ok(r) => ok_callback(r),
@@ -85,19 +85,27 @@ impl Wallpapers {
         });
     }
 
-    pub fn download(&mut self, index: usize) {
+    pub fn download(&mut self, index: usize, in_favourites: bool) {
         let ptr = QPointer::from(&*self);
         let ok_callback = queued_callback(move |v: String| {
             ptr.as_ref().map(|p| {
                 let mutp = unsafe { &mut *(p as *const _ as *mut Self) };
-                mutp.list.borrow_mut()[index].image = ("file:".to_owned() + &v).into();
-                let idx = (&mut *mutp.list.borrow_mut() as &mut QAbstractListModel)
-                    .row_index(index as i32);
-                (&mut *mutp.list.borrow_mut() as &mut QAbstractListModel).data_changed(idx, idx);
+                let mut list = if in_favourites {
+                    mutp.favourites.borrow_mut()
+                } else {
+                    mutp.list.borrow_mut()
+                };
+                list[index].image = ("file:".to_owned() + &v).into();
+                let idx = (&mut *list as &mut QAbstractListModel).row_index(index as i32);
+                (&mut *list as &mut QAbstractListModel).data_changed(idx, idx);
             });
         });
         let err_callback = queued_callback(move |e: String| eprintln!("{}", e));
-        let wp = &self.list.borrow()[index];
+        let wp = &if in_favourites {
+            self.favourites.borrow()
+        } else {
+            self.list.borrow()
+        }[index];
         let id = wp.id.clone();
         let urlbase = wp.urlbase.clone();
         let resolution = "1920x1080";
@@ -110,13 +118,27 @@ impl Wallpapers {
         );
     }
 
-    pub fn like(&mut self, index: usize) {
+    pub fn like(&mut self, mut index: usize, in_favourites: bool) {
+        if in_favourites {
+            let id = self.favourites.borrow()[index].id.clone();
+            self.favourites.borrow_mut().remove(index);
+            match linear_search_by(&self.list.borrow(), |v| v.id == id) {
+                Some(i) => index = i,
+                None => return,
+            }
+        }
         let wallpapers = &mut *self.list.borrow_mut();
         wallpapers[index].like = !wallpapers[index].like;
         if wallpapers[index].like {
             self.config.likes.insert(wallpapers[index].id.clone());
+            self.favourites.borrow_mut().push(wallpapers[index].clone());
         } else {
-            self.config.likes.remove(&wallpapers[index].id);
+            let id = &wallpapers[index].id;
+            self.config.likes.remove(id);
+            let i = linear_search_by(&self.favourites.borrow(), |v| &*v.id == id);
+            if let Some(i) = i {
+                self.favourites.borrow_mut().remove(i);
+            }
         }
         self.config.save().expect("Failed to save config!");
         let idx = (wallpapers as &mut QAbstractListModel).row_index(index as i32);
@@ -187,7 +209,7 @@ struct RawImage {
     metas: Vec<ImageMeta>,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct QWallpaper {
     pub name: qt_property!(QString),
     pub preview: qt_property!(QString),
@@ -393,4 +415,13 @@ fn build_client() -> reqwest::Client {
         .build()
         .expect("build client");
     client
+}
+
+fn linear_search_by<T>(s: &[T], f: impl Fn(&T) -> bool) -> Option<usize> {
+    for (i, v) in s.iter().enumerate() {
+        if f(v) {
+            return Some(i);
+        }
+    }
+    None
 }
