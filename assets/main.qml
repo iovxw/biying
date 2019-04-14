@@ -56,6 +56,7 @@ ApplicationWindow {
         Item {
             WallpaperFlow {
                 model: wallpapers.favourites
+                loading: wallpapers.favourites_loading
                 onNextPage: {
                     wallpapers.next_page_favourites()
                 }
@@ -72,6 +73,7 @@ ApplicationWindow {
             WallpaperFlow {
                 id: mainPage
                 model: wallpapers.list
+                loading: wallpapers.list_loading
                 onNextPage: {
                     wallpapers.fetch_next_page()
                 }

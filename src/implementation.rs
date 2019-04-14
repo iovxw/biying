@@ -20,6 +20,10 @@ pub struct Wallpapers {
     pub error: qt_signal!(err: QString),
     pub list: qt_property!(RefCell<MutListModel<QWallpaper>>; CONST),
     pub favourites: qt_property!(RefCell<MutListModel<QWallpaper>>; CONST),
+    pub list_loading: qt_property!(bool; NOTIFY list_loading_changed),
+    pub list_loading_changed: qt_signal!(),
+    pub favourites_loading: qt_property!(bool; NOTIFY favourites_loading_changed),
+    pub favourites_loading_changed: qt_signal!(),
     pub fetch_next_page: qt_method!(fn (&self)),
     pub next_page_favourites: qt_method!(fn (&self)),
     pub download: qt_method!(fn (&mut self, index: usize, in_favourites: bool)),
@@ -38,6 +42,8 @@ impl Wallpapers {
     }
 
     pub fn fetch_next_page(&mut self) {
+        self.list_loading = true;
+        self.list_loading_changed();
         let ptr = QPointer::from(&*self);
         let ok_callback = queued_callback(move |v: Vec<RawImage>| {
             ptr.as_ref().map(|p| {
@@ -47,6 +53,8 @@ impl Wallpapers {
                     wallpaper.like = p.config.likes.contains(&wallpaper.id);
                     mutp.list.borrow_mut().push(wallpaper);
                 }
+                mutp.list_loading = false;
+                mutp.list_loading_changed();
             });
         });
         let ptr = QPointer::from(&*self);
@@ -62,6 +70,11 @@ impl Wallpapers {
     }
 
     pub fn next_page_favourites(&mut self) {
+        if self.favourites.borrow().len() == self.config.likes.len() {
+            return;
+        }
+        self.favourites_loading = true;
+        self.favourites_loading_changed();
         let ptr = QPointer::from(&*self);
         let ok_callback = queued_callback(move |v: Vec<RawImage>| {
             ptr.as_ref().map(|p| {
@@ -71,6 +84,8 @@ impl Wallpapers {
                     wallpaper.like = p.config.likes.contains(&wallpaper.id);
                     mutp.favourites.borrow_mut().push(wallpaper);
                 }
+                mutp.favourites_loading = false;
+                mutp.favourites_loading_changed();
             });
         });
         let ptr = QPointer::from(&*self);

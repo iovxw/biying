@@ -13,6 +13,7 @@ GridView {
     anchors.leftMargin: (parent.width % previewW) / 2
     clip: true
 
+    property bool loading
     signal nextPage()
     signal download(int index)
     signal likeClicked(int index)
@@ -169,6 +170,7 @@ GridView {
     }
 
     footer: BusyIndicator {
+        visible: loading
         height: 60
         width: parent.width
     }
