@@ -46,7 +46,7 @@ impl<T: MutListItem> MutListModel<T> {
     pub fn remove(&mut self, index: usize) {
         (self as &mut QAbstractListModel).begin_remove_rows(index as i32, index as i32);
         self.values.remove(index);
-        (self as &mut QAbstractListModel).end_insert_rows();
+        (self as &mut QAbstractListModel).end_remove_rows();
     }
     pub fn change_line(&mut self, index: usize, value: T) {
         self.values[index] = value;
@@ -67,8 +67,10 @@ where
     fn row_count(&self) -> i32 {
         self.values.len() as i32
     }
+    // WHY?
     fn data(&self, index: QModelIndex, role: i32) -> QVariant {
         let idx = index.row();
+        dbg!(idx);dbg!(role - USER_ROLE);
         if idx >= 0 && (idx as usize) < self.values.len() {
             self.values[idx as usize].get(role - USER_ROLE).clone()
         } else {
