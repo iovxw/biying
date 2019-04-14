@@ -67,10 +67,8 @@ where
     fn row_count(&self) -> i32 {
         self.values.len() as i32
     }
-    // WHY?
     fn data(&self, index: QModelIndex, role: i32) -> QVariant {
         let idx = index.row();
-        dbg!(idx);dbg!(role - USER_ROLE);
         if idx >= 0 && (idx as usize) < self.values.len() {
             self.values[idx as usize].get(role - USER_ROLE).clone()
         } else {
