@@ -22,7 +22,7 @@ GridView {
 
     ScrollBar.vertical: ScrollBar { }
 
-    onMovementEnded: if (atYEnd) {
+    onMovementEnded: if (atYEnd && !loading) {
         nextPage()
     }
 
@@ -44,7 +44,9 @@ GridView {
                 anchors.fill: parent
                 onClicked: if (parent.status == Image.Ready) {
                     popup.open()
-                    download(index)
+                    if (!model.loading) {
+                        download(index)
+                    }
                 }
             }
 
@@ -78,8 +80,8 @@ GridView {
 
             BusyIndicator {
                 height: 60
+                visible: model.loading
                 anchors.centerIn: parent
-                visible: !model.image
             }
 
             Image {
@@ -88,7 +90,7 @@ GridView {
                 width: parent.width
                 fillMode: Image.PreserveAspectFit
                 source: model.image
-                visible: model.image
+                visible: !model.loading
 
                 MouseArea {
                     id: wallpaperImageArea

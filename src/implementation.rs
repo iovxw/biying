@@ -111,20 +111,28 @@ impl Wallpapers {
                     mutp.list.borrow_mut()
                 };
                 list[index].image = ("file:".to_owned() + &v).into();
+                list[index].loading = false;
                 let idx = (&mut *list as &mut QAbstractListModel).row_index(index as i32);
                 (&mut *list as &mut QAbstractListModel).data_changed(idx, idx);
             });
         });
         let err_callback = queued_callback(move |e: String| eprintln!("{}", e));
-        let wp = &if in_favourites {
-            self.favourites.borrow()
+
+        let mut list = if in_favourites {
+            self.favourites.borrow_mut()
         } else {
-            self.list.borrow()
-        }[index];
+            self.list.borrow_mut()
+        };
+        let wp = &mut list[index];
+        wp.loading = true;
         let id = wp.id.clone();
         let urlbase = wp.urlbase.clone();
         let resolution = "1920x1080";
         let download_dir = self.config.download_dir.clone();
+
+        let idx = (&mut *list as &mut QAbstractListModel).row_index(index as i32);
+        (&mut *list as &mut QAbstractListModel).data_changed(idx, idx);
+
         thread::spawn(
             move || match download_image(&id, &urlbase, resolution, &download_dir) {
                 Ok(path) => ok_callback(path),
@@ -233,6 +241,7 @@ pub struct QWallpaper {
     pub wp: qt_property!(bool),
     pub like: qt_property!(bool),
     pub image: qt_property!(QString),
+    pub loading: qt_property!(bool),
     id: String,
     urlbase: String,
 }
@@ -247,6 +256,7 @@ impl MutListItem for QWallpaper {
             4 => QMetaType::to_qvariant(&self.wp),
             5 => QMetaType::to_qvariant(&self.like),
             6 => QMetaType::to_qvariant(&self.image),
+            7 => QMetaType::to_qvariant(&self.loading),
             _ => QVariant::default(),
         }
     }
@@ -259,6 +269,7 @@ impl MutListItem for QWallpaper {
             4 => <_>::from_qvariant(value.clone()).map(|v| self.wp = v),
             5 => <_>::from_qvariant(value.clone()).map(|v| self.like = v),
             6 => <_>::from_qvariant(value.clone()).map(|v| self.image = v),
+            7 => <_>::from_qvariant(value.clone()).map(|v| self.loading = v),
             _ => None,
         }
         .is_some()
@@ -272,6 +283,7 @@ impl MutListItem for QWallpaper {
             QByteArray::from("wp"),
             QByteArray::from("like"),
             QByteArray::from("image"),
+            QByteArray::from("loading"),
         ]
     }
 }
