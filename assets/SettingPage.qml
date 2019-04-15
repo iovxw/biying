@@ -21,12 +21,14 @@ Rectangle {
             ColumnLayout {
                 width: parent.width
                 spacing: 10
+
                 GroupBox {
                     Layout.fillWidth: true
                     title: qsTr("Desktop Enviroment")
 
                     ColumnLayout {
                         width: parent.width
+
                         ComboBox {
                             id: currentDE
                             Layout.fillWidth: true
@@ -45,13 +47,16 @@ Rectangle {
                         }
                     }
                 }
+
                 GroupBox {
                     Layout.fillWidth: true
                     title: qsTr("Automatically Change Wallpaper")
+
                     GridLayout {
                         width: parent.width
                         rowSpacing: 10
                         columns: 2
+
                         Label {
                             text: qsTr("Enable")
                         }
@@ -69,6 +74,7 @@ Rectangle {
                                 enabled: autoChangeWallpaperBtn.checked
                                 value: 5
                                 to: 999
+                                editable: true
                             }
                             Label {
                                 text: qsTr("minuts")
@@ -97,6 +103,79 @@ Rectangle {
                                     text: qsTr("Random")
                                 }
                             }
+                        }
+                    }
+                }
+
+                GroupBox {
+                    title: qsTr("Resolution")
+                    Layout.fillWidth: true
+
+                    RowLayout {
+                        width: parent.width
+
+                        Label {
+                            text: qsTr("Preview")
+                        }
+                        ComboBox {
+                            model: ["800*480", "480*800"]
+                        }
+                        Label {
+                            text: qsTr("Download")
+                        }
+                        ComboBox {
+                            model: ["1920*1080", "1366*768", "1080*1920", "768*1280"]
+                        }
+                    }
+                }
+
+                GroupBox {
+                    title: qsTr("Disk usage")
+                    Layout.fillWidth: true
+
+                    GridLayout {
+                        width: parent.width
+                        columns: 4
+                        rowSpacing: 10
+
+                        Label {
+                            text: qsTr("Favourites")
+                            Layout.preferredWidth: 1
+                        }
+                        Label {
+                            text: qsTr("1 MB")
+                            Layout.preferredWidth: 1
+                        }
+                        Label {
+                            text: qsTr("Others")
+                            Layout.preferredWidth: 1
+                        }
+                        Label {
+                            text: qsTr("1 MB")
+                            Layout.preferredWidth: 1
+                        }
+
+                        Label {
+                            Layout.columnSpan: 2
+                            text: qsTr("Autoremove wallpapers from")
+                        }
+                        RowLayout {
+                            Layout.columnSpan: 2
+                            Layout.alignment: Qt.AlignRight
+                            SpinBox {
+                                value: 30
+                                to: 999
+                                editable: true
+                            }
+                            Label {
+                                text: qsTr("days ago")
+                            }
+                        }
+
+                        Button {
+                            Layout.columnSpan: 4
+                            Layout.alignment: Qt.AlignRight
+                            text: qsTr("Clear all other wallpapers")
                         }
                     }
                 }
