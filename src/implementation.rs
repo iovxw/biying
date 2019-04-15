@@ -206,8 +206,6 @@ struct ServerError {
 #[derive(Deserialize, Clone, Default, Debug)]
 #[serde(rename_all = "camelCase")]
 struct ImageMeta {
-    date: String,
-    link: String,
     info: String,
     market: String,
     image: ImagePointer,
@@ -335,7 +333,6 @@ impl From<&RawImage> for QWallpaper {
 #[derive(QGadget, Clone, Default)]
 pub struct QWallpaperInfo {
     pub market: qt_property!(QString),
-    pub link: qt_property!(QString),
     pub info: qt_property!(QString),
 }
 
@@ -343,7 +340,6 @@ impl From<&ImageMeta> for QWallpaperInfo {
     fn from(v: &ImageMeta) -> QWallpaperInfo {
         QWallpaperInfo {
             market: v.market.as_str().into(),
-            link: v.link.as_str().into(),
             info: v.info.as_str().into(),
         }
     }
