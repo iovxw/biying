@@ -2,6 +2,7 @@ import QtQuick 2.8
 import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.3
 import QtGraphicalEffects 1.0
+import Qt.labs.platform 1.0
 
 ApplicationWindow {
     id: window
@@ -29,6 +30,33 @@ ApplicationWindow {
         wallpapers.onError.connect(function(err) {
             console.log("error:", err)
         })
+    }
+
+    SystemTrayIcon {
+        visible: true
+        iconSource: "https://iovxw.net/favicon.png"
+        iconName: "livewallpaper-indicator"
+
+        onActivated: {
+            window.show()
+            window.raise()
+            window.requestActivate()
+        }
+
+        menu: Menu {
+            MenuItem {
+                text: qsTr("Open")
+                onTriggered: {
+                    window.show()
+                    window.raise()
+                    window.requestActivate()
+                }
+            }
+            MenuItem {
+                text: qsTr("Quit")
+                onTriggered: Qt.quit()
+            }
+        }
     }
 
     TabBar {

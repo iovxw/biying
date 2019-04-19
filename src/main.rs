@@ -1,6 +1,7 @@
 #![feature(type_alias_enum_variants)]
 #![feature(try_trait)]
 #![feature(result_map_or_else)]
+#![recursion_limit="128"]
 
 use cpp::*;
 use qmetaobject::*;
@@ -10,10 +11,18 @@ mod listmodel;
 mod config;
 
 cpp! {{
+    #include <memory>
+    #include <QtQuick/QtQuick>
     #include <QtCore/QTranslator>
     #include <QtWidgets/QApplication>
 
     static QTranslator translator;
+
+    struct QmlEngineHolder {
+        std::unique_ptr<QApplication> app;
+        std::unique_ptr<QQmlApplicationEngine> engine;
+        std::unique_ptr<QQuickView> view;
+    };
 }}
 
 qrc! { init_ressource,
@@ -41,6 +50,9 @@ fn main() {
         cpp!([] {
             translator.load(QLocale::system(), "", "", ":/assets/i18n");
             QApplication::installTranslator(&translator);
+        });
+        cpp!([engine as "QmlEngineHolder*"] {
+            engine->app->setQuitOnLastWindowClosed(false);
         });
     }
     engine.load_file("qrc:/assets/main.qml".into());
