@@ -34,7 +34,7 @@ ApplicationWindow {
 
     SystemTrayIcon {
         visible: true
-        iconSource: "https://iovxw.net/favicon.png"
+        iconSource: "icon.png"
         iconName: "livewallpaper-indicator"
 
         onActivated: {

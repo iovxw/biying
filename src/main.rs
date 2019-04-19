@@ -12,6 +12,7 @@ mod config;
 
 cpp! {{
     #include <memory>
+    #include <QtGui/QIcon>
     #include <QtQuick/QtQuick>
     #include <QtCore/QTranslator>
     #include <QtWidgets/QApplication>
@@ -31,6 +32,7 @@ qrc! { init_ressource,
          "assets/WallpaperFlow.qml",
          "assets/SettingPage.qml",
          "assets/background.png",
+         "assets/icon.png",
          "assets/i18n/zh_CN.qm",
      },
 }
@@ -52,6 +54,9 @@ fn main() {
             QApplication::installTranslator(&translator);
         });
         cpp!([engine as "QmlEngineHolder*"] {
+            auto icon = QIcon::fromTheme("livewallpaper", QIcon(":/assets/icon.png"));
+            engine->app->setWindowIcon(icon);
+
             engine->app->setQuitOnLastWindowClosed(false);
         });
     }
