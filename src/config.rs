@@ -1,22 +1,119 @@
+use std::cell::RefCell;
 use std::collections::HashSet;
 use std::env;
 use std::fs;
 use std::io::prelude::*;
+use std::iter::FromIterator;
 use std::path::PathBuf;
 
+use qmetaobject::*;
 use serde::{Deserialize, Serialize};
 use toml;
 
-#[derive(Serialize, Deserialize, Debug)]
+use crate::listmodel::{MutListItem, MutListModel};
+
+impl Config {
+    pub fn open() -> Result<Self, failure::Error> {
+        let mut f = fs::File::open(Self::config_dir().join("config.toml"))?;
+        let mut s = String::new();
+        f.read_to_string(&mut s)?;
+        let config = toml::from_str(&s)?;
+        Ok(config)
+    }
+
+    pub fn save(&self) -> Result<(), failure::Error> {
+        let path = Self::config_dir();
+        if !path.exists() {
+            fs::create_dir_all(&path)?;
+        }
+        let mut f = fs::File::create(path.join("config.toml"))?;
+        let s = toml::Value::try_from(self).unwrap();
+        let mut v = toml::to_vec(&s)?;
+        f.write_all(&mut v)?;
+        Ok(())
+    }
+
+    fn config_dir() -> PathBuf {
+        env::var("XDG_CONFIG_HOME")
+            .map_or_else(
+                |_| env::var("HOME").expect("") + "/.config/" + env!("CARGO_PKG_NAME"),
+                |path| path + "/" + env!("CARGO_PKG_NAME"),
+            )
+            .into()
+    }
+}
+
+#[derive(QObject, Serialize, Deserialize)]
 pub struct Config {
+    #[serde(skip)]
+    base: qt_base_class!(trait QObject),
+    #[serde(rename = "custom_cmd", with = "custom_cmd")]
+    pub de: qt_property!(RefCell<MutListModel<DesktopEnviroment>>; CONST),
+    pub de_index: qt_property!(usize; NOTIFY s1),
+    pub auto_change: qt_property!(AutoChangeConfig; NOTIFY s2),
+    pub resolution: qt_property!(Resolution; NOTIFY s3),
+    pub autoremove: qt_property!(u32; NOTIFY s4),
+    #[serde(skip)]
+    s1: qt_signal!(),
+    #[serde(skip)]
+    s2: qt_signal!(),
+    #[serde(skip)]
+    s3: qt_signal!(),
+    #[serde(skip)]
+    s4: qt_signal!(),
     pub download_dir: PathBuf,
     pub cache_dir: PathBuf,
     pub likes: HashSet<String>,
 }
 
+// Only read and save the `cmd` of "Other", ignore default values
+mod custom_cmd {
+    use super::*;
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    pub fn serialize<S>(
+        s: &RefCell<MutListModel<DesktopEnviroment>>,
+        ser: S,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let cmd = String::from_utf16_lossy(s.borrow().iter().last().unwrap().cmd.to_slice());
+        String::serialize(&cmd, ser)
+    }
+
+    pub fn deserialize<'de, D>(de: D) -> Result<RefCell<MutListModel<DesktopEnviroment>>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let cmd = String::deserialize(de)?;
+        let mut de = default_de_list();
+        de.push(DesktopEnviroment {
+            name: "Other".into(),
+            cmd: cmd.into(),
+        });
+        Ok(RefCell::new(<_>::from_iter(de)))
+    }
+}
+
 impl Default for Config {
     fn default() -> Self {
+        let mut de = default_de_list();
+        de.push(DesktopEnviroment {
+            name: "Other".into(),
+            cmd: "".into(),
+        });
         Self {
+            base: Default::default(),
+            de: RefCell::new(<_>::from_iter(de)),
+            de_index: 0,
+            auto_change: Default::default(),
+            resolution: Default::default(),
+            autoremove: 30,
+            s1: Default::default(),
+            s2: Default::default(),
+            s3: Default::default(),
+            s4: Default::default(),
             download_dir: env::var("XDG_DATA_HOME")
                 .map_or_else(
                     |_| env::var("HOME").expect("") + "/.local/share/" + env!("CARGO_PKG_NAME"),
@@ -34,32 +131,147 @@ impl Default for Config {
     }
 }
 
-impl Config {
-    pub fn open() -> Result<Self, failure::Error> {
-        let mut f = fs::File::open(Self::config_dir().join("config.toml"))?;
-        let mut s = String::new();
-        f.read_to_string(&mut s)?;
-        let config = toml::from_str(&s)?;
-        Ok(config)
-    }
+fn default_de_list() -> Vec<DesktopEnviroment> {
+    vec![
+        DesktopEnviroment {
+            name: "GNOME".into(),
+            cmd: "a".into(),
+        },
+        DesktopEnviroment {
+            name: "KDE".into(),
+            cmd: "b".into(),
+        },
+        DesktopEnviroment {
+            name: "Xfce".into(),
+            cmd: "c".into(),
+        },
+        DesktopEnviroment {
+            name: "LXQt".into(),
+            cmd: "d".into(),
+        },
+        DesktopEnviroment {
+            name: "LXDE".into(),
+            cmd: "".into(),
+        },
+        DesktopEnviroment {
+            name: "Cinnamon".into(),
+            cmd: "".into(),
+        },
+        DesktopEnviroment {
+            name: "Deepin".into(),
+            cmd: "".into(),
+        },
+        DesktopEnviroment {
+            name: "Budgie".into(),
+            cmd: "".into(),
+        },
+        DesktopEnviroment {
+            name: "Enlightenment".into(),
+            cmd: "".into(),
+        },
+        DesktopEnviroment {
+            name: "MATE".into(),
+            cmd: "".into(),
+        },
+    ]
+}
 
-    pub fn save(&self) -> Result<(), failure::Error> {
-        let path = Self::config_dir();
-        if !path.exists() {
-            fs::create_dir_all(&path)?;
+#[derive(QGadget, Clone, Serialize, Deserialize)]
+pub struct AutoChangeConfig {
+    pub enable: qt_property!(bool),
+    pub interval: qt_property!(u32),
+    pub mode: qt_property!(u8),
+}
+
+impl Default for AutoChangeConfig {
+    fn default() -> Self {
+        Self {
+            enable: false,
+            interval: 5,
+            mode: 0,
         }
-        let mut f = fs::File::create(path.join("config.toml"))?;
-        let mut v = toml::to_vec(self)?;
-        f.write_all(&mut v)?;
-        Ok(())
+    }
+}
+
+#[derive(QGadget, Clone, Serialize, Deserialize)]
+pub struct Resolution {
+    #[serde(skip, default = "default_preview")]
+    pub preview: qt_property!(QVariantList),
+    pub preview_index: qt_property!(usize),
+    #[serde(skip, default = "default_download")]
+    pub download: qt_property!(QVariantList),
+    pub download_index: qt_property!(usize),
+}
+
+impl Default for Resolution {
+    fn default() -> Self {
+        Self {
+            preview: default_preview(),
+            preview_index: 0,
+            download: default_download(),
+            download_index: 0,
+        }
+    }
+}
+
+fn default_preview() -> QVariantList {
+    <_>::from_iter(vec![QString::from("800*480"), QString::from("480*800")])
+}
+
+fn default_download() -> QVariantList {
+    <_>::from_iter(vec![
+        QString::from("1920*1080"),
+        QString::from("1366*768"),
+        QString::from("1080*1920"),
+        QString::from("768*1280"),
+    ])
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct DesktopEnviroment {
+    #[serde(with = "qstring")]
+    pub name: QString,
+    #[serde(with = "qstring")]
+    pub cmd: QString,
+}
+
+mod qstring {
+    use super::*;
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    pub fn serialize<S>(s: &QString, ser: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        String::serialize(&String::from_utf16_lossy(s.to_slice()), ser)
     }
 
-    fn config_dir() -> PathBuf {
-        env::var("XDG_CONFIG_HOME")
-            .map_or_else(
-                |_| env::var("HOME").expect("") + "/.config/" + env!("CARGO_PKG_NAME"),
-                |path| path + "/" + env!("CARGO_PKG_NAME"),
-            )
-            .into()
+    pub fn deserialize<'de, D>(de: D) -> Result<QString, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let v = String::deserialize(de)?;
+        Ok(v.into())
+    }
+}
+
+impl MutListItem for DesktopEnviroment {
+    fn get(&self, idx: i32) -> QVariant {
+        match idx {
+            0 => QMetaType::to_qvariant(&self.name),
+            1 => QMetaType::to_qvariant(&self.cmd),
+            _ => QVariant::default(),
+        }
+    }
+    fn set(&mut self, value: &QVariant, idx: i32) -> bool {
+        match idx {
+            0 => <_>::from_qvariant(value.clone()).map(|v| self.name = v),
+            1 => <_>::from_qvariant(value.clone()).map(|v| self.cmd = v),
+            _ => None,
+        }
+        .is_some()
+    }
+    fn names() -> Vec<QByteArray> {
+        vec![QByteArray::from("name"), QByteArray::from("cmd")]
     }
 }

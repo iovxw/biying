@@ -33,13 +33,14 @@ Rectangle {
                             id: currentDe
                             Layout.fillWidth: true
                             textRole: "name"
-                            Component.onCompleted: currentIndex = wallpapers.qconfig.de_index
+                            model: wallpapers.config.de
+                            currentIndex: 0 // a default value to avoid currentIndexChanged when item init
+                            Component.onCompleted: currentIndex = wallpapers.config.de_index
                             onCurrentIndexChanged: {
-                                wallpapers.qconfig.de_index = currentIndex
+                                wallpapers.config.de_index = currentIndex
                                 let index = model.index(currentIndex, 0)
                                 currentDeCmd.text = model.data(index, Qt.UserRole + 1)
                             }
-                            model: wallpapers.qconfig.de
                         }
 
                         Label {
@@ -78,8 +79,8 @@ Rectangle {
                         Switch {
                             id: autoChangeWallpaperBtn
                             Layout.alignment: Qt.AlignRight
-                            Component.onCompleted: checked = wallpapers.qconfig.auto_change.enable
-                            onCheckedChanged: wallpapers.qconfig.auto_change.enable = checked
+                            Component.onCompleted: checked = wallpapers.config.auto_change.enable
+                            onCheckedChanged: wallpapers.config.auto_change.enable = checked
                         }
 
                         Label {
@@ -108,20 +109,20 @@ Rectangle {
                                 enabled: autoChangeWallpaperBtn.checked
                                 RadioButton {
                                     Layout.alignment: Qt.AlignHCenter
-                                    Component.onCompleted: checked = wallpapers.qconfig.auto_change.mode == 0
-                                    onCheckedChanged: wallpapers.qconfig.auto_change.mode = 0
+                                    Component.onCompleted: checked = wallpapers.config.auto_change.mode == 0
+                                    onCheckedChanged: wallpapers.config.auto_change.mode = 0
                                     text: qsTr("Newest")
                                 }
                                 RadioButton {
                                     Layout.alignment: Qt.AlignHCenter
-                                    Component.onCompleted: checked = wallpapers.qconfig.auto_change.mode == 1
-                                    onCheckedChanged: wallpapers.qconfig.auto_change.mode = 1
+                                    Component.onCompleted: checked = wallpapers.config.auto_change.mode == 1
+                                    onCheckedChanged: wallpapers.config.auto_change.mode = 1
                                     text: qsTr("Favourites")
                                 }
                                 RadioButton {
                                     Layout.alignment: Qt.AlignHCenter
-                                    Component.onCompleted: checked = wallpapers.qconfig.auto_change.mode == 2
-                                    onCheckedChanged: wallpapers.qconfig.auto_change.mode = 2
+                                    Component.onCompleted: checked = wallpapers.config.auto_change.mode == 2
+                                    onCheckedChanged: wallpapers.config.auto_change.mode = 2
                                     text: qsTr("Random")
                                 }
                             }
@@ -140,17 +141,19 @@ Rectangle {
                             text: qsTr("Preview")
                         }
                         ComboBox {
-                            Component.onCompleted: currentIndex = wallpapers.qconfig.resolution.preview_index
-                            onCurrentIndexChanged: wallpapers.qconfig.resolution.preview_index = currentIndex
-                            model: wallpapers.qconfig.resolution.preview
+                            currentIndex: 0
+                            Component.onCompleted: currentIndex = wallpapers.config.resolution.preview_index
+                            onCurrentIndexChanged: wallpapers.config.resolution.preview_index = currentIndex
+                            model: wallpapers.config.resolution.preview
                         }
                         Label {
                             text: qsTr("Download")
                         }
                         ComboBox {
-                            Component.onCompleted: currentIndex = wallpapers.qconfig.resolution.download_index
-                            onCurrentIndexChanged: wallpapers.qconfig.resolution.download_index = currentIndex
-                            model: wallpapers.qconfig.resolution.download
+                            currentIndex: 0
+                            Component.onCompleted: currentIndex = wallpapers.config.resolution.download_index
+                            onCurrentIndexChanged: wallpapers.config.resolution.download_index = currentIndex
+                            model: wallpapers.config.resolution.download
                         }
                     }
                 }
@@ -189,8 +192,8 @@ Rectangle {
                             Layout.columnSpan: 2
                             Layout.alignment: Qt.AlignRight
                             SpinBox {
-                                Component.onCompleted: value = wallpapers.qconfig.autoremove
-                                onValueChanged: wallpapers.qconfig.autoremove = value
+                                Component.onCompleted: value = wallpapers.config.autoremove
+                                onValueChanged: wallpapers.config.autoremove = value
                                 to: 999
                                 editable: true
                             }
