@@ -90,7 +90,8 @@ Rectangle {
                             Layout.alignment: Qt.AlignRight
                             SpinBox {
                                 enabled: autoChangeWallpaperBtn.checked
-                                value: 5
+                                Component.onCompleted: value = wallpapers.config.auto_change.interval
+                                onValueChanged: wallpapers.config.auto_change.interval = value
                                 to: 999
                                 editable: true
                             }
