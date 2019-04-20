@@ -20,6 +20,18 @@ pub struct MutListModel<T: MutListItem + 'static> {
     values: Vec<T>,
 }
 
+impl<T> std::iter::FromIterator<T> for MutListModel<T>
+where
+    T: MutListItem,
+{
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> MutListModel<T> {
+        Self {
+            base: Default::default(),
+            values: Vec::from_iter(iter),
+        }
+    }
+}
+
 impl<T: MutListItem> Deref for MutListModel<T> {
     type Target = [T];
     fn deref(&self) -> &Self::Target {

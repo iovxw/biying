@@ -28,15 +28,159 @@ pub struct Wallpapers {
     pub next_page_favourites: qt_method!(fn (&self)),
     pub download: qt_method!(fn (&mut self, index: usize, in_favourites: bool)),
     pub like: qt_method!(fn (&mut self, index: usize, in_favourites: bool)),
+    pub qconfig: qt_property!(RefCell<QConfig>; CONST),
     config: Config,
     offset: usize,
     favourites_offset: usize,
 }
 
+#[derive(QObject)]
+pub struct QConfig {
+    base: qt_base_class!(trait QObject),
+    pub de: qt_property!(RefCell<MutListModel<DesktopEnviroment>>; CONST),
+    pub de_index: qt_property!(usize; NOTIFY s1),
+    pub auto_change: qt_property!(AutoChangeConfig; NOTIFY s2),
+    pub resolution: qt_property!(Resolution; NOTIFY s3),
+    pub autoremove: qt_property!(u32; NOTIFY s4),
+    s1: qt_signal!(),
+    s2: qt_signal!(),
+    s3: qt_signal!(),
+    s4: qt_signal!(),
+}
+
+impl Default for QConfig {
+    fn default() -> Self {
+        Self {
+            base: Default::default(),
+            de: RefCell::new(<_>::from_iter(vec![
+                DesktopEnviroment {
+                    name: "GNOME".into(),
+                    cmd: "a".into(),
+                },
+                DesktopEnviroment {
+                    name: "KDE".into(),
+                    cmd: "b".into(),
+                },
+                DesktopEnviroment {
+                    name: "Xfce".into(),
+                    cmd: "c".into(),
+                },
+                DesktopEnviroment {
+                    name: "LXQt".into(),
+                    cmd: "d".into(),
+                },
+                DesktopEnviroment {
+                    name: "LXDE".into(),
+                    cmd: "".into(),
+                },
+                DesktopEnviroment {
+                    name: "Cinnamon".into(),
+                    cmd: "".into(),
+                },
+                DesktopEnviroment {
+                    name: "Deepin".into(),
+                    cmd: "".into(),
+                },
+                DesktopEnviroment {
+                    name: "Budgie".into(),
+                    cmd: "".into(),
+                },
+                DesktopEnviroment {
+                    name: "Enlightenment".into(),
+                    cmd: "".into(),
+                },
+                DesktopEnviroment {
+                    name: "MATE".into(),
+                    cmd: "".into(),
+                },
+                DesktopEnviroment {
+                    name: "Other".into(),
+                    cmd: "".into(),
+                },
+            ])),
+            de_index: 0,
+            auto_change: Default::default(),
+            resolution: Default::default(),
+            autoremove: 30,
+            s1: Default::default(),
+            s2: Default::default(),
+            s3: Default::default(),
+            s4: Default::default(),
+        }
+    }
+}
+
+#[derive(QGadget, Clone)]
+pub struct AutoChangeConfig {
+    pub enable: qt_property!(bool),
+    pub interval: qt_property!(u32),
+    pub mode: qt_property!(u8),
+}
+
+impl Default for AutoChangeConfig {
+    fn default() -> Self {
+        Self {
+            enable: false,
+            interval: 5,
+            mode: 0,
+        }
+    }
+}
+
+#[derive(QGadget, Clone)]
+pub struct Resolution {
+    pub preview: qt_property!(QVariantList),
+    pub preview_index: qt_property!(usize),
+    pub download: qt_property!(QVariantList),
+    pub download_index: qt_property!(usize),
+}
+
+impl Default for Resolution {
+    fn default() -> Self {
+        Self {
+            preview: <_>::from_iter(vec![QString::from("800*480"), QString::from("480*800")]),
+            preview_index: 0,
+            download: <_>::from_iter(vec![
+                QString::from("1920*1080"),
+                QString::from("1366*768"),
+                QString::from("1080*1920"),
+                QString::from("768*1280"),
+            ]),
+            download_index: 0,
+        }
+    }
+}
+
+pub struct DesktopEnviroment {
+    pub name: QString,
+    pub cmd: QString,
+}
+
+impl MutListItem for DesktopEnviroment {
+    fn get(&self, idx: i32) -> QVariant {
+        match idx {
+            0 => QMetaType::to_qvariant(&self.name),
+            1 => QMetaType::to_qvariant(&self.cmd),
+            _ => QVariant::default(),
+        }
+    }
+    fn set(&mut self, value: &QVariant, idx: i32) -> bool {
+        match idx {
+            0 => <_>::from_qvariant(value.clone()).map(|v| self.name = v),
+            1 => <_>::from_qvariant(value.clone()).map(|v| self.cmd = v),
+            _ => None,
+        }
+        .is_some()
+    }
+    fn names() -> Vec<QByteArray> {
+        vec![QByteArray::from("name"), QByteArray::from("cmd")]
+    }
+}
+
 impl Wallpapers {
     pub fn new() -> Self {
         Self {
-            config: Config::open().unwrap_or_default(),
+            config: Config::open().expect("Failed to open config file"),
             ..Default::default()
         }
     }
