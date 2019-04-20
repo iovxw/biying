@@ -135,43 +135,31 @@ fn default_de_list() -> Vec<DesktopEnviroment> {
     vec![
         DesktopEnviroment {
             name: "GNOME".into(),
-            cmd: "a".into(),
-        },
-        DesktopEnviroment {
-            name: "KDE".into(),
-            cmd: "b".into(),
-        },
-        DesktopEnviroment {
-            name: "Xfce".into(),
-            cmd: "c".into(),
+            cmd: "gsettings set org.gnome.desktop.background picture-uri 'file://$WALLPAPER'".into(),
         },
         DesktopEnviroment {
             name: "LXQt".into(),
-            cmd: "d".into(),
+            cmd: "pcmanfm-qt --set-wallpaper '$WALLPAPER'".into(),
         },
         DesktopEnviroment {
             name: "LXDE".into(),
-            cmd: "".into(),
+            cmd: "pcmanfm --set-wallpaper '$WALLPAPER'".into(),
         },
         DesktopEnviroment {
             name: "Cinnamon".into(),
-            cmd: "".into(),
+            cmd: "gsettings set org.cinnamon.desktop.background picture-uri 'file://$WALLPAPER'".into(),
         },
         DesktopEnviroment {
             name: "Deepin".into(),
-            cmd: "".into(),
+            cmd: "gsettings set com.deepin.wrap.gnome.desktop.background picture-uri 'file://$WALLPAPER'".into(),
         },
         DesktopEnviroment {
             name: "Budgie".into(),
-            cmd: "".into(),
-        },
-        DesktopEnviroment {
-            name: "Enlightenment".into(),
-            cmd: "".into(),
+            cmd: "gsettings set org.gnome.desktop.background picture-uri 'file://$WALLPAPER'".into(),
         },
         DesktopEnviroment {
             name: "MATE".into(),
-            cmd: "".into(),
+            cmd: "gsettings set org.mate.background picture-filename '$WALLPAPER'".into(),
         },
     ]
 }
