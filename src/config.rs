@@ -134,16 +134,8 @@ impl Default for Config {
 fn default_de_list() -> Vec<DesktopEnviroment> {
     vec![
         DesktopEnviroment {
-            name: "GNOME".into(),
+            name: "Budgie".into(),
             cmd: "gsettings set org.gnome.desktop.background picture-uri 'file://$WALLPAPER'".into(),
-        },
-        DesktopEnviroment {
-            name: "LXQt".into(),
-            cmd: "pcmanfm-qt --set-wallpaper '$WALLPAPER'".into(),
-        },
-        DesktopEnviroment {
-            name: "LXDE".into(),
-            cmd: "pcmanfm --set-wallpaper '$WALLPAPER'".into(),
         },
         DesktopEnviroment {
             name: "Cinnamon".into(),
@@ -154,8 +146,16 @@ fn default_de_list() -> Vec<DesktopEnviroment> {
             cmd: "gsettings set com.deepin.wrap.gnome.desktop.background picture-uri 'file://$WALLPAPER'".into(),
         },
         DesktopEnviroment {
-            name: "Budgie".into(),
+            name: "GNOME".into(),
             cmd: "gsettings set org.gnome.desktop.background picture-uri 'file://$WALLPAPER'".into(),
+        },
+        DesktopEnviroment {
+            name: "LXDE".into(),
+            cmd: "pcmanfm --set-wallpaper '$WALLPAPER'".into(),
+        },
+        DesktopEnviroment {
+            name: "LXQt".into(),
+            cmd: "pcmanfm-qt --set-wallpaper '$WALLPAPER'".into(),
         },
         DesktopEnviroment {
             name: "MATE".into(),
