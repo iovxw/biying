@@ -106,7 +106,7 @@ impl Default for Config {
         Self {
             base: Default::default(),
             de: RefCell::new(<_>::from_iter(de)),
-            de_index: 0,
+            de_index: current_de(),
             auto_change: Default::default(),
             resolution: Default::default(),
             autoremove: 30,
@@ -162,6 +162,33 @@ fn default_de_list() -> Vec<DesktopEnviroment> {
             cmd: "gsettings set org.mate.background picture-filename '$WALLPAPER'".into(),
         },
     ]
+}
+
+fn current_de() -> usize {
+    let v: String = (&[
+        "XDG_CURRENT_DESKTOP",
+        "XDG_SESSION_DESKTOP",
+        "DESKTOP_SESSION",
+        "GDMSESSION",
+    ])
+        .iter()
+        .map(|e| env::var(e))
+        .filter(|r| r.is_ok())
+        .map(Result::unwrap)
+        .filter(|r| !r.is_empty())
+        .map(|s| s.to_lowercase())
+        .next()
+        .unwrap_or_default();
+    match &*v {
+        "budgie" => 0,
+        "cinnamon" | "x-cinnamon" => 1,
+        "deepin" => 2,
+        "gnome" | "ubuntu:gnome" | "gnome-xorg" | "gnome-wayland" => 3,
+        "lxde" => 4,
+        "lxqt" => 5,
+        "mate" => 6,
+        _ => 7,
+    }
 }
 
 #[derive(QGadget, Clone, Serialize, Deserialize)]
