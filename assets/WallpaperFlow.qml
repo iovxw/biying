@@ -17,6 +17,7 @@ GridView {
     signal nextPage()
     signal download(int index)
     signal likeClicked(int index)
+    signal setWallpaperClicked(int index)
 
     Component.onCompleted: nextPage()
 
@@ -158,6 +159,7 @@ GridView {
                 anchors.right: popupBtn2.left
                 anchors.bottom: parent.bottom
                 anchors.rightMargin: popup.padding / 2
+                onClicked: setWallpaperClicked(index)
             }
 
             Button {

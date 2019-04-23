@@ -3,6 +3,7 @@ use std::fs;
 use std::iter::FromIterator;
 use std::ops::Try;
 use std::path::PathBuf;
+use std::process;
 use std::thread;
 
 use chrono::prelude::*;
@@ -28,6 +29,7 @@ pub struct Wallpapers {
     pub next_page_favourites: qt_method!(fn (&self)),
     pub download: qt_method!(fn (&mut self, index: usize, in_favourites: bool)),
     pub like: qt_method!(fn (&mut self, index: usize, in_favourites: bool)),
+    pub set_wallpaper: qt_method!(fn (&self, index: usize, in_favourites: bool)),
     pub config: qt_property!(RefCell<Config>; CONST),
     offset: usize,
     favourites_offset: usize,
@@ -127,18 +129,58 @@ impl Wallpapers {
         wp.loading = true;
         let id = wp.id.clone();
         let urlbase = wp.urlbase.clone();
-        let resolution = "1920x1080";
-        let download_dir = self.config.borrow().download_dir.clone();
+        let config = self.config.borrow();
+        let resolution =
+            config.resolution.download[config.resolution.download_index].to_qbytearray();
+        let download_dir = config.download_dir.clone();
 
         let idx = (&mut *list as &mut QAbstractListModel).row_index(index as i32);
         (&mut *list as &mut QAbstractListModel).data_changed(idx, idx);
 
-        thread::spawn(
-            move || match download_image(&id, &urlbase, resolution, &download_dir) {
+        thread::spawn(move || {
+            let resolution = resolution.to_str().unwrap();
+            match download_image(&id, &urlbase, resolution, &download_dir) {
                 Ok(path) => ok_callback(path),
                 Err(e) => err_callback(e.to_string()),
-            },
+            }
+        });
+    }
+
+    pub fn set_wallpaper(&self, index: usize, in_favourites: bool) {
+        let config = self.config.borrow();
+        let wallpaper = &if in_favourites {
+            self.favourites.borrow()
+        } else {
+            self.list.borrow()
+        }[index];
+
+        let resolution =
+            config.resolution.download[config.resolution.download_index].to_qbytearray();
+        let resolution = resolution.to_str().unwrap();
+
+        let file = download_image(
+            &wallpaper.id,
+            &wallpaper.urlbase,
+            resolution,
+            &config.download_dir,
         );
+
+        let file = match file {
+            Ok(v) => v,
+            Err(e) => {
+                self.error(e.to_string().into());
+                return;
+            }
+        };
+
+        let de = &config.de.borrow()[config.de_index];
+        let cmd = String::from_utf16_lossy(de.cmd.to_slice());
+        process::Command::new("sh")
+            .env("WALLPAPER", &file)
+            .arg("-c")
+            .arg(&cmd)
+            .spawn()
+            .expect("");
     }
 
     pub fn like(&mut self, mut index: usize, in_favourites: bool) {

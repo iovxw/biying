@@ -135,31 +135,31 @@ fn default_de_list() -> Vec<DesktopEnviroment> {
     vec![
         DesktopEnviroment {
             name: "Budgie".into(),
-            cmd: "gsettings set org.gnome.desktop.background picture-uri 'file://$WALLPAPER'".into(),
+            cmd: r#"gsettings set org.gnome.desktop.background picture-uri "file://$WALLPAPER""#.into(),
         },
         DesktopEnviroment {
             name: "Cinnamon".into(),
-            cmd: "gsettings set org.cinnamon.desktop.background picture-uri 'file://$WALLPAPER'".into(),
+            cmd: r#"gsettings set org.cinnamon.desktop.background picture-uri "file://$WALLPAPER""#.into(),
         },
         DesktopEnviroment {
             name: "Deepin".into(),
-            cmd: "gsettings set com.deepin.wrap.gnome.desktop.background picture-uri 'file://$WALLPAPER'".into(),
+            cmd: r#"gsettings set com.deepin.wrap.gnome.desktop.background picture-uri "file://$WALLPAPER""#.into(),
         },
         DesktopEnviroment {
             name: "GNOME".into(),
-            cmd: "gsettings set org.gnome.desktop.background picture-uri 'file://$WALLPAPER'".into(),
+            cmd: r#"gsettings set org.gnome.desktop.background picture-uri "file://$WALLPAPER""#.into(),
         },
         DesktopEnviroment {
             name: "LXDE".into(),
-            cmd: "pcmanfm --set-wallpaper '$WALLPAPER'".into(),
+            cmd: r#"pcmanfm --set-wallpaper "$WALLPAPER""#.into(),
         },
         DesktopEnviroment {
             name: "LXQt".into(),
-            cmd: "pcmanfm-qt --set-wallpaper '$WALLPAPER'".into(),
+            cmd: r#"pcmanfm-qt --set-wallpaper "$WALLPAPER""#.into(),
         },
         DesktopEnviroment {
             name: "MATE".into(),
-            cmd: "gsettings set org.mate.background picture-filename '$WALLPAPER'".into(),
+            cmd: r#"gsettings set org.mate.background picture-filename "$WALLPAPER""#.into(),
         },
     ]
 }
@@ -230,15 +230,15 @@ impl Default for Resolution {
 }
 
 fn default_preview() -> QVariantList {
-    <_>::from_iter(vec![QString::from("800*480"), QString::from("480*800")])
+    <_>::from_iter(vec![QString::from("800x480"), QString::from("480x800")])
 }
 
 fn default_download() -> QVariantList {
     <_>::from_iter(vec![
-        QString::from("1920*1080"),
-        QString::from("1366*768"),
-        QString::from("1080*1920"),
-        QString::from("768*1280"),
+        QString::from("1920x1080"),
+        QString::from("1366x768"),
+        QString::from("1080x1920"),
+        QString::from("768x1280"),
     ])
 }
 

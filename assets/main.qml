@@ -94,6 +94,9 @@ ApplicationWindow {
                 onLikeClicked: {
                     wallpapers.like(index, true)
                 }
+                onSetWallpaperClicked: {
+                    wallpapers.set_wallpaper(index, true)
+                }
             }
         }
 
@@ -110,6 +113,9 @@ ApplicationWindow {
                 }
                 onLikeClicked: {
                     wallpapers.like(index, false)
+                }
+                onSetWallpaperClicked: {
+                    wallpapers.set_wallpaper(index, false)
                 }
             }
         }
