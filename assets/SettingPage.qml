@@ -219,6 +219,7 @@ Rectangle {
                             Layout.columnSpan: 4
                             Layout.alignment: Qt.AlignRight
                             text: qsTr("Clear all other wallpapers")
+                            onClicked: wallpapers.clear_other_wallpapers()
                         }
                     }
                 }

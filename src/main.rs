@@ -1,5 +1,6 @@
 #![feature(type_alias_enum_variants)]
 #![feature(try_trait)]
+#![feature(try_blocks)]
 #![feature(result_map_or_else)]
 #![recursion_limit="128"]
 

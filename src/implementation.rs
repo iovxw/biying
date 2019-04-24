@@ -33,6 +33,7 @@ pub struct Wallpapers {
     pub diskusage_others: qt_property!(u64; NOTIFY diskusage_changed),
     pub diskusage_favourites: qt_property!(u64; NOTIFY diskusage_changed),
     pub diskusage_changed: qt_signal!(),
+    pub clear_other_wallpapers: qt_method!(fn (&mut self)),
     pub config: qt_property!(RefCell<Config>; CONST),
     offset: usize,
     favourites_offset: usize,
@@ -226,7 +227,37 @@ impl Wallpapers {
         self.update_diskusage().unwrap_or_default();
     }
 
-    pub fn update_diskusage(&mut self) -> Result<(), failure::Error> {
+    pub fn clear_other_wallpapers(&mut self) {
+        let config = self.config.borrow();
+        let r: Result<(), failure::Error> = try {
+            let download_dir = fs::read_dir(&config.download_dir)?;
+
+            for entry in download_dir {
+                let entry = entry?;
+                let path = entry.path();
+                if path.is_dir() {
+                    fs::remove_dir_all(path)?;
+                    continue;
+                }
+                let name = entry
+                    .file_name()
+                    .into_string()
+                    .expect("file name to String");
+                let id = name.split('_').next().expect("Illegal file name");
+                if !config.likes.contains(id) {
+                    fs::remove_file(path)?;
+                }
+            }
+
+            self.diskusage_others = 0;
+            self.diskusage_changed();
+        };
+        if let Err(e) = r {
+            self.error(e.to_string().into());
+        }
+    }
+
+    fn update_diskusage(&mut self) -> Result<(), failure::Error> {
         let config = self.config.borrow();
         let download_dir = fs::read_dir(&config.download_dir)?;
         let mut favourites = 0;
