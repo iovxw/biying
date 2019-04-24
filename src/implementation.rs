@@ -30,6 +30,9 @@ pub struct Wallpapers {
     pub download: qt_method!(fn (&mut self, index: usize, in_favourites: bool)),
     pub like: qt_method!(fn (&mut self, index: usize, in_favourites: bool)),
     pub set_wallpaper: qt_method!(fn (&self, index: usize, in_favourites: bool)),
+    pub diskusage_others: qt_property!(u64; NOTIFY diskusage_changed),
+    pub diskusage_favourites: qt_property!(u64; NOTIFY diskusage_changed),
+    pub diskusage_changed: qt_signal!(),
     pub config: qt_property!(RefCell<Config>; CONST),
     offset: usize,
     favourites_offset: usize,
@@ -37,10 +40,12 @@ pub struct Wallpapers {
 
 impl Wallpapers {
     pub fn new() -> Self {
-        Self {
+        let mut s = Self {
             config: RefCell::new(Config::open().unwrap_or_default()),
             ..Default::default()
-        }
+        };
+        s.update_diskusage().unwrap_or_default();
+        s
     }
 
     pub fn fetch_next_page(&mut self) {
@@ -107,6 +112,7 @@ impl Wallpapers {
         let ok_callback = queued_callback(move |v: String| {
             ptr.as_ref().map(|p| {
                 let mutp = unsafe { &mut *(p as *const _ as *mut Self) };
+                mutp.update_diskusage().unwrap_or_default();
                 let mut list = if in_favourites {
                     mutp.favourites.borrow_mut()
                 } else {
@@ -187,30 +193,66 @@ impl Wallpapers {
         if in_favourites {
             let id = self.favourites.borrow()[index].id.clone();
             self.favourites.borrow_mut().remove(index);
-            match linear_search_by(&self.list.borrow(), |v| v.id == id) {
+            let r = linear_search_by(&self.list.borrow(), |v| v.id == id);
+            match r {
                 Some(i) => index = i,
-                None => return,
+                None => {
+                    self.update_diskusage().unwrap_or_default();
+                    return;
+                }
             }
         }
-        let wallpapers = &mut *self.list.borrow_mut();
-        wallpapers[index].like = !wallpapers[index].like;
-        if wallpapers[index].like {
-            self.config
-                .borrow_mut()
-                .likes
-                .insert(wallpapers[index].id.clone());
-            self.favourites.borrow_mut().push(wallpapers[index].clone());
-        } else {
-            let id = &wallpapers[index].id;
-            self.config.borrow_mut().likes.remove(id);
-            let i = linear_search_by(&self.favourites.borrow(), |v| &*v.id == id);
-            if let Some(i) = i {
-                self.favourites.borrow_mut().remove(i);
+        {
+            let wallpapers = &mut *self.list.borrow_mut();
+            wallpapers[index].like = !wallpapers[index].like;
+            if wallpapers[index].like {
+                self.config
+                    .borrow_mut()
+                    .likes
+                    .insert(wallpapers[index].id.clone());
+                self.favourites.borrow_mut().push(wallpapers[index].clone());
+            } else {
+                let id = &wallpapers[index].id;
+                self.config.borrow_mut().likes.remove(id);
+                let i = linear_search_by(&self.favourites.borrow(), |v| &*v.id == id);
+                if let Some(i) = i {
+                    self.favourites.borrow_mut().remove(i);
+                }
+            }
+            self.config.borrow().save().expect("Failed to save config!");
+            let idx = (wallpapers as &mut QAbstractListModel).row_index(index as i32);
+            (wallpapers as &mut QAbstractListModel).data_changed(idx, idx);
+        }
+        self.update_diskusage().unwrap_or_default();
+    }
+
+    pub fn update_diskusage(&mut self) -> Result<(), failure::Error> {
+        let config = self.config.borrow();
+        let download_dir = fs::read_dir(&config.download_dir)?;
+        let mut favourites = 0;
+        let mut others = 0;
+        for entry in download_dir {
+            let entry = entry?;
+            let metadata = entry.metadata().expect("Wallpaper file metadata");
+            if metadata.is_dir() {
+                continue;
+            }
+            let name = entry
+                .file_name()
+                .into_string()
+                .expect("file name to String");
+            let id = name.split('_').next().expect("Illegal file name");
+            let file_size = metadata.len();
+            if config.likes.contains(id) {
+                favourites += file_size;
+            } else {
+                others += file_size;
             }
         }
-        self.config.borrow().save().expect("Failed to save config!");
-        let idx = (wallpapers as &mut QAbstractListModel).row_index(index as i32);
-        (wallpapers as &mut QAbstractListModel).data_changed(idx, idx);
+        self.diskusage_favourites = favourites;
+        self.diskusage_others = others;
+        self.diskusage_changed();
+        Ok(())
     }
 }
 
