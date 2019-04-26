@@ -2,14 +2,14 @@
 #![feature(try_trait)]
 #![feature(try_blocks)]
 #![feature(result_map_or_else)]
-#![recursion_limit="128"]
+#![recursion_limit = "128"]
 
 use cpp::*;
 use qmetaobject::*;
 
+mod config;
 mod implementation;
 mod listmodel;
-mod config;
 
 cpp! {{
     #include <memory>

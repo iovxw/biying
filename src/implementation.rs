@@ -8,7 +8,9 @@ use std::thread;
 
 use chrono::prelude::*;
 use failure::{self, format_err, Fail};
+use lazy_static::lazy_static;
 use qmetaobject::*;
+use regex::Regex;
 use reqwest;
 use serde::Deserialize;
 
@@ -30,6 +32,7 @@ pub struct Wallpapers {
     pub download: qt_method!(fn (&mut self, index: usize, in_favourites: bool)),
     pub like: qt_method!(fn (&mut self, index: usize, in_favourites: bool)),
     pub set_wallpaper: qt_method!(fn (&self, index: usize, in_favourites: bool)),
+    pub next_wallpaper: qt_method!(fn (&self)),
     pub diskusage_others: qt_property!(u64; NOTIFY diskusage_changed),
     pub diskusage_favourites: qt_property!(u64; NOTIFY diskusage_changed),
     pub diskusage_changed: qt_signal!(),
@@ -154,13 +157,13 @@ impl Wallpapers {
     }
 
     pub fn set_wallpaper(&self, index: usize, in_favourites: bool) {
-        let config = self.config.borrow();
         let wallpaper = &if in_favourites {
             self.favourites.borrow()
         } else {
             self.list.borrow()
         }[index];
 
+        let config = self.config.borrow();
         let resolution =
             config.resolution.download[config.resolution.download_index].to_qbytearray();
         let resolution = resolution.to_str().unwrap();
@@ -169,7 +172,7 @@ impl Wallpapers {
             &wallpaper.id,
             &wallpaper.urlbase,
             resolution,
-            &config.download_dir,
+            &self.config.borrow().download_dir,
         );
 
         let file = match file {
@@ -180,14 +183,7 @@ impl Wallpapers {
             }
         };
 
-        let de = &config.de.borrow()[config.de_index];
-        let cmd = String::from_utf16_lossy(de.cmd.to_slice());
-        process::Command::new("sh")
-            .env("WALLPAPER", &file)
-            .arg("-c")
-            .arg(&cmd)
-            .spawn()
-            .expect("");
+        self.set_wallpaper_cmd(&file);
     }
 
     pub fn like(&mut self, mut index: usize, in_favourites: bool) {
@@ -257,6 +253,60 @@ impl Wallpapers {
         }
     }
 
+    pub fn next_wallpaper(&self) {
+        let r: Result<(), failure::Error> = try {
+            let config = self.config.borrow();
+            let resolution =
+                config.resolution.download[config.resolution.download_index].to_qbytearray();
+            let resolution = resolution.to_str().unwrap();
+            match config.auto_change.mode {
+                // Newest
+                0 => (),
+                // Favourites
+                1 => (),
+                // Random
+                2 => {
+                    let mut downloaded = fs::read_dir(&config.download_dir)?
+                        .filter_map(Result::ok)
+                        .map(|entry| (entry.path(), entry.file_name()))
+                        .filter(|(_path, name)| {
+                            let name = name.to_string_lossy();
+                            parse_wallpaper_filename(&name)
+                                .map(|(_, res)| res == resolution)
+                                .unwrap_or(false)
+                        })
+                        .map(|(path, _name)| path)
+                        .collect::<Vec<_>>();
+                    if downloaded.is_empty() {
+                        return;
+                    }
+
+                    let idx = rand::random::<usize>() % downloaded.len();
+
+                    let file = downloaded.remove(idx);
+
+                    self.set_wallpaper_cmd(&file.to_string_lossy());
+                }
+                _ => unreachable!(),
+            }
+        };
+        if let Err(e) = r {
+            self.error(e.to_string().into());
+        }
+    }
+
+    fn set_wallpaper_cmd(&self, file: &str) {
+        let config = self.config.borrow();
+        let de = &config.de.borrow()[config.de_index];
+        let cmd = String::from_utf16_lossy(de.cmd.to_slice());
+        process::Command::new("sh")
+            .env("WALLPAPER", file)
+            .arg("-c")
+            .arg(&cmd)
+            .spawn()
+            .expect("");
+    }
+
     fn update_diskusage(&mut self) -> Result<(), failure::Error> {
         let config = self.config.borrow();
         let download_dir = fs::read_dir(&config.download_dir)?;
@@ -285,6 +335,17 @@ impl Wallpapers {
         self.diskusage_changed();
         Ok(())
     }
+}
+
+fn parse_wallpaper_filename(file: &str) -> Option<(&str, &str)> {
+    lazy_static! {
+        static ref WALLPAPER_FILE_NAME: Regex =
+            Regex::new(r#"([[:alnum:]]+)_(\d+x\d+)\.\w+"#).unwrap();
+    }
+    let re = WALLPAPER_FILE_NAME.captures(file)?;
+    let id = re.get(1)?;
+    let res = re.get(2)?;
+    Some((id.as_str(), res.as_str()))
 }
 
 #[derive(Deserialize)]

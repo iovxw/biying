@@ -80,6 +80,13 @@ Rectangle {
                     Layout.fillWidth: true
                     title: qsTr("Automatically Change Wallpaper")
 
+                    Timer {
+                        running: wallpapers.config.auto_change.enable
+                        repeat: true
+                        interval: wallpapers.config.auto_change.interval * 60 * 1000
+                        onTriggered: wallpapers.next_wallpaper()
+                    }
+
                     GridLayout {
                         width: parent.width
                         rowSpacing: 10
