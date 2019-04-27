@@ -49,7 +49,7 @@ impl Wallpapers {
             config: RefCell::new(Config::open().unwrap_or_default()),
             ..Default::default()
         };
-        s.update_diskusage().unwrap_or_default();
+        s.update_diskusage_and_autoclean().unwrap_or_default();
         s
     }
 
@@ -117,7 +117,7 @@ impl Wallpapers {
         let ok_callback = queued_callback(move |v: String| {
             ptr.as_ref().map(|p| {
                 let mutp = unsafe { &mut *(p as *const _ as *mut Self) };
-                mutp.update_diskusage().unwrap_or_default();
+                mutp.update_diskusage_and_autoclean().unwrap_or_default();
                 let mut list = if in_favourites {
                     mutp.favourites.borrow_mut()
                 } else {
@@ -195,7 +195,7 @@ impl Wallpapers {
             match r {
                 Some(i) => index = i,
                 None => {
-                    self.update_diskusage().unwrap_or_default();
+                    self.update_diskusage_and_autoclean().unwrap_or_default();
                     return;
                 }
             }
@@ -221,7 +221,7 @@ impl Wallpapers {
             let idx = (wallpapers as &mut QAbstractListModel).row_index(index as i32);
             (wallpapers as &mut QAbstractListModel).data_changed(idx, idx);
         }
-        self.update_diskusage().unwrap_or_default();
+        self.update_diskusage_and_autoclean().unwrap_or_default();
     }
 
     pub fn clear_other_wallpapers(&mut self) {
@@ -317,28 +317,33 @@ impl Wallpapers {
             let entry = entry?;
             let metadata = entry.metadata().expect("Wallpaper file metadata");
             if metadata.is_dir() {
+                // remove all other files
+                fs::remove_dir_all(entry.path())?;
                 continue;
             }
 
             let created = metadata.created().expect("read metadata created");
             let outdated = SystemTime::now().duration_since(created)?
                 > Duration::from_secs(config.autoremove * 24 * 60 * 60);
-            if outdated {
-                fs::remove_file(entry.path())?;
-                continue;
-            }
 
             let name = entry
                 .file_name()
                 .into_string()
                 .expect("file name to String");
-            let id = name.split('_').next().expect("Illegal file name");
-            let file_size = metadata.len();
-            if config.likes.contains(id) {
-                favourites += file_size;
+            if let Some((id, _)) = parse_wallpaper_filename(&name) {
+                let favourited = config.likes.contains(id);
+                let file_size = metadata.len();
+                if favourited {
+                    favourites += file_size;
+                } else if outdated {
+                    fs::remove_file(entry.path())?;
+                } else {
+                    others += file_size;
+                }
             } else {
-                others += file_size;
-            }
+                // remove all other files
+                fs::remove_file(entry.path())?;
+            };
         }
         self.diskusage_favourites = favourites;
         self.diskusage_others = others;
