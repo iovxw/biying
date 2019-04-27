@@ -5,6 +5,7 @@ use std::ops::Try;
 use std::path::PathBuf;
 use std::process;
 use std::thread;
+use std::time::{Duration, SystemTime};
 
 use chrono::prelude::*;
 use failure::{self, format_err, Fail};
@@ -307,7 +308,7 @@ impl Wallpapers {
             .expect("");
     }
 
-    fn update_diskusage(&mut self) -> Result<(), failure::Error> {
+    fn update_diskusage_and_autoclean(&mut self) -> Result<(), failure::Error> {
         let config = self.config.borrow();
         let download_dir = fs::read_dir(&config.download_dir)?;
         let mut favourites = 0;
@@ -318,6 +319,15 @@ impl Wallpapers {
             if metadata.is_dir() {
                 continue;
             }
+
+            let created = metadata.created().expect("read metadata created");
+            let outdated = SystemTime::now().duration_since(created)?
+                > Duration::from_secs(config.autoremove * 24 * 60 * 60);
+            if outdated {
+                fs::remove_file(entry.path())?;
+                continue;
+            }
+
             let name = entry
                 .file_name()
                 .into_string()

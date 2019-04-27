@@ -52,7 +52,7 @@ pub struct Config {
     pub de_index: qt_property!(usize; NOTIFY s1),
     pub auto_change: qt_property!(AutoChangeConfig; NOTIFY s2),
     pub resolution: qt_property!(Resolution; NOTIFY s3),
-    pub autoremove: qt_property!(u32; NOTIFY s4),
+    pub autoremove: qt_property!(u64; NOTIFY s4),
     #[serde(skip)]
     s1: qt_signal!(),
     #[serde(skip)]
