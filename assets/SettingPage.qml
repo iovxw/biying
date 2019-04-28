@@ -111,6 +111,7 @@ Rectangle {
                                 enabled: autoChangeWallpaperBtn.checked
                                 Component.onCompleted: value = wallpapers.config.auto_change.interval
                                 onValueChanged: wallpapers.config.auto_change.interval = value
+                                from: 1
                                 to: 999
                                 editable: true
                             }
@@ -214,6 +215,7 @@ Rectangle {
                             SpinBox {
                                 Component.onCompleted: value = wallpapers.config.autoremove
                                 onValueChanged: wallpapers.config.autoremove = value
+                                from: 1
                                 to: 999
                                 editable: true
                             }
