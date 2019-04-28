@@ -599,7 +599,8 @@ fn fill_wallpapers_metadata(
 
     let url = reqwest::Url::parse_with_params(
         "https://leancloud.cn/1.1/classes/Archive",
-        &[("where", &where_query)],
+        // Default limit is 100, maximum is 1000
+        &[("where", &*where_query), ("limit", "1000")],
     )
     .expect("parse url");
 
