@@ -362,14 +362,16 @@ impl Wallpapers {
                 .file_name()
                 .into_string()
                 .expect("file name to String");
-            if let Some((id, _)) = parse_wallpaper_filename(&name) {
+            if let Some((id, res)) = parse_wallpaper_filename(&name) {
                 let favourited = config.likes.iter().any(|x| x == id);
+                let resolution =
+                    config.resolution.download[config.resolution.download_index].to_qbytearray();
+                let resolution = resolution.to_str().unwrap();
                 let file_size = metadata.len();
-                // TODO: check the resolution
-                if favourited {
-                    favourites += file_size;
-                } else if outdated {
+                if res != resolution || (outdated && !favourited) {
                     fs::remove_file(entry.path())?;
+                } else if favourited {
+                    favourites += file_size;
                 } else {
                     others += file_size;
                 }
