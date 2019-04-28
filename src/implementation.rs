@@ -322,7 +322,7 @@ impl Wallpapers {
                 continue;
             }
 
-            let created = metadata.created().expect("read metadata created");
+            let created = metadata.modified().expect("read metadata created");
             let outdated = SystemTime::now().duration_since(created)?
                 > Duration::from_secs(config.autoremove * 24 * 60 * 60);
 
@@ -333,6 +333,7 @@ impl Wallpapers {
             if let Some((id, _)) = parse_wallpaper_filename(&name) {
                 let favourited = config.likes.contains(id);
                 let file_size = metadata.len();
+                // TODO: check the resolution
                 if favourited {
                     favourites += file_size;
                 } else if outdated {
