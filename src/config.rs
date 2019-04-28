@@ -1,5 +1,4 @@
 use std::cell::RefCell;
-use std::collections::HashSet;
 use std::env;
 use std::fs;
 use std::io::prelude::*;
@@ -63,7 +62,7 @@ pub struct Config {
     s4: qt_signal!(),
     pub download_dir: PathBuf,
     pub cache_dir: PathBuf,
-    pub likes: HashSet<String>,
+    pub likes: Vec<String>,
 }
 
 // Only read and save the `cmd` of "Other", ignore default values

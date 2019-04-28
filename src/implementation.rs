@@ -62,7 +62,7 @@ impl Wallpapers {
                 let mutp = unsafe { &mut *(p as *const _ as *mut Self) };
                 for v in v {
                     let mut wallpaper: QWallpaper = (&v).into();
-                    wallpaper.like = p.config.borrow().likes.contains(&wallpaper.id);
+                    wallpaper.like = p.config.borrow().likes.iter().any(|x| x == &wallpaper.id);
                     mutp.list.borrow_mut().push(wallpaper);
                 }
                 mutp.list_loading = false;
@@ -93,7 +93,7 @@ impl Wallpapers {
                 let mutp = unsafe { &mut *(p as *const _ as *mut Self) };
                 for v in v {
                     let mut wallpaper: QWallpaper = (&v).into();
-                    wallpaper.like = p.config.borrow().likes.contains(&wallpaper.id);
+                    wallpaper.like = p.config.borrow().likes.iter().any(|x| x == &wallpaper.id);
                     mutp.favourites.borrow_mut().push(wallpaper);
                 }
                 mutp.favourites_loading = false;
@@ -207,11 +207,13 @@ impl Wallpapers {
                 self.config
                     .borrow_mut()
                     .likes
-                    .insert(wallpapers[index].id.clone());
-                self.favourites.borrow_mut().push(wallpapers[index].clone());
+                    .insert(0, wallpapers[index].id.clone());
+                self.favourites
+                    .borrow_mut()
+                    .insert(0, wallpapers[index].clone());
             } else {
                 let id = &wallpapers[index].id;
-                self.config.borrow_mut().likes.remove(id);
+                self.config.borrow_mut().likes.remove_item(id);
                 let i = linear_search_by(&self.favourites.borrow(), |v| &*v.id == id);
                 if let Some(i) = i {
                     self.favourites.borrow_mut().remove(i);
@@ -241,7 +243,7 @@ impl Wallpapers {
                     .into_string()
                     .expect("file name to String");
                 let id = name.split('_').next().expect("Illegal file name");
-                if !config.likes.contains(id) {
+                if !config.likes.iter().any(|x| x == id) {
                     fs::remove_file(path)?;
                 }
             }
@@ -281,14 +283,20 @@ impl Wallpapers {
                 // Favourites
                 1 => {
                     let idx = rand::random::<usize>() % config.likes.len();
-                    let wallpaper = &config.likes[idx];
+                    let id = &config.likes[idx];
+                    let wallpaper = if let Some(x) = fetch_wallpapers_by_id(&[id])?.pop() {
+                        x
+                    } else {
+                        return;
+                    };
                     let path = download_image(
                         &wallpaper.object_id,
                         &wallpaper.urlbase,
                         resolution,
                         &config.download_dir,
                     )?;
-                },
+                    self.set_wallpaper_cmd(&path);
+                }
                 // Random
                 2 => {
                     let mut downloaded = fs::read_dir(&config.download_dir)?
@@ -355,7 +363,7 @@ impl Wallpapers {
                 .into_string()
                 .expect("file name to String");
             if let Some((id, _)) = parse_wallpaper_filename(&name) {
-                let favourited = config.likes.contains(id);
+                let favourited = config.likes.iter().any(|x| x == id);
                 let file_size = metadata.len();
                 // TODO: check the resolution
                 if favourited {
@@ -585,12 +593,14 @@ fn fetch_wallpapers(offset: usize, limit: usize) -> Result<Vec<RawImage>, failur
     fill_wallpapers_metadata(&client, images)
 }
 
-fn fetch_wallpapers_by_id(id_list: &[String]) -> Result<Vec<RawImage>, failure::Error> {
+fn fetch_wallpapers_by_id<'a, I: IntoIterator<Item = T>, T: AsRef<str>>(
+    id_list: I,
+) -> Result<Vec<RawImage>, failure::Error> {
     let client = build_client();
 
     let where_query: Vec<String> = id_list
-        .iter()
-        .map(|img| format!(r#"{{"objectId":"{}"}}"#, img))
+        .into_iter()
+        .map(|img| format!(r#"{{"objectId":"{}"}}"#, img.as_ref()))
         .collect();
     let where_query = format!("{{\"$or\":[{}]}}", where_query.join(","));
 
