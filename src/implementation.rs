@@ -262,9 +262,33 @@ impl Wallpapers {
             let resolution = resolution.to_str().unwrap();
             match config.auto_change.mode {
                 // Newest
-                0 => (),
+                0 => {
+                    let wallpaper = if let Some(r) = fetch_wallpapers(0, 1)?.pop() {
+                        r
+                    } else {
+                        return;
+                    };
+
+                    let path = download_image(
+                        &wallpaper.object_id,
+                        &wallpaper.urlbase,
+                        resolution,
+                        &config.download_dir,
+                    )?;
+
+                    self.set_wallpaper_cmd(&path);
+                }
                 // Favourites
-                1 => (),
+                1 => {
+                    let idx = rand::random::<usize>() % config.likes.len();
+                    let wallpaper = &config.likes[idx];
+                    let path = download_image(
+                        &wallpaper.object_id,
+                        &wallpaper.urlbase,
+                        resolution,
+                        &config.download_dir,
+                    )?;
+                },
                 // Random
                 2 => {
                     let mut downloaded = fs::read_dir(&config.download_dir)?
