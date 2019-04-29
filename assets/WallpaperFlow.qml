@@ -71,6 +71,7 @@ GridView {
             anchors.centerIn: Overlay.overlay
             background: FastBlur {
                 source: Image {
+                    cache: false
                     width: popup.width
                     height: popup.height
                     source: model.preview
