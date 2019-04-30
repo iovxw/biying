@@ -64,4 +64,5 @@ fn main() {
     }
     engine.load_file("qrc:/assets/main.qml".into());
     engine.exec();
+    wallpapers.borrow().config.borrow().save().expect("Failed to save configs");
 }
