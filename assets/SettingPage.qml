@@ -232,6 +232,25 @@ Rectangle {
                         }
                     }
                 }
+
+                GroupBox {
+                    title: qsTr("About")
+                    Layout.fillWidth: true
+
+                    ColumnLayout {
+                        width: parent.width
+                        Label {
+                            Layout.alignment: Qt.AlignHCenter
+                            text: qsTr("Server: ") + "<a href=\"https://wp.bohan.co\">bohan</a>"
+                            onLinkActivated: Qt.openUrlExternally(link)
+                        }
+                        Label {
+                            Layout.alignment: Qt.AlignHCenter
+                            text: qsTr("Client: ") + "<a href=\"https://iovxw.net\">iovxw</a>"
+                            onLinkActivated: Qt.openUrlExternally(link)
+                        }
+                    }
+                }
             }
         }
     }
