@@ -32,8 +32,14 @@ ApplicationWindow {
         })
     }
 
+    onClosing: {
+        if (!wallpapers.config.auto_change.enable) {
+            Qt.quit()
+        }
+    }
+
     SystemTrayIcon {
-        visible: true
+        visible: wallpapers.config.auto_change.enable
         iconSource: "icon.png"
         iconName: "livewallpaper-indicator"
 
