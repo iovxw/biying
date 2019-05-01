@@ -11,5 +11,13 @@ addons:
     packages:
       - mesa-common-dev
       - qt512declarative
+      - qt512quickcontrols2
+      - qt512graphicaleffects
 install:
   - source /opt/qt512/bin/qt512-env.sh
+after_success:
+  - cargo build --release
+  - cd linuxdeployqt.AppDir
+  - wget -c -nv "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
+  - ./linuxdeployqt-continuous-x86_64.AppImage ../target/release/biying -appimage -no-translations -no-copy-copyright-files -verbose=2 -qmldir=../assets
+  - curl --upload-file *.AppImage https://transfer.sh/biying-git.$(git rev-parse --short HEAD)-x86_64.AppImage
