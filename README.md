@@ -2,6 +2,10 @@
 
 [碧影壁纸](https://www.microsoft.com/store/apps/9nblggh6cxp8) for Linux
 
+|      Main Window      |     Wallpaper Preview    |
+:----------------------:|:-------------------------:
+![](screenshot_main.png)|![](screenshot_preview.png)
+
 ## License
 
 This is free and unencumbered software released into the public domain.
