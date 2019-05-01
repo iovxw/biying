@@ -18,6 +18,7 @@ install:
 after_success:
   - cargo build --release
   - cd linuxdeployqt.AppDir
+  - cp ../target/release/biying .
   - wget -c -nv "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
-  - ./linuxdeployqt-continuous-x86_64.AppImage ../target/release/biying -appimage -no-translations -no-copy-copyright-files -verbose=2 -qmldir=../assets
+  - ./linuxdeployqt-continuous-x86_64.AppImage biying.desktop -appimage -no-translations -no-copy-copyright-files -verbose=2 -qmldir=../assets
   - curl --upload-file *.AppImage https://transfer.sh/biying-git.$(git rev-parse --short HEAD)-x86_64.AppImage
