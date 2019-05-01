@@ -51,11 +51,12 @@ fn main() {
 
     let engine = &mut engine;
     unsafe {
-        cpp!([] {
+        cpp!([engine as "QmlEngineHolder*"] {
+            QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+
             translator.load(QLocale::system(), "", "", ":/assets/i18n");
             QApplication::installTranslator(&translator);
-        });
-        cpp!([engine as "QmlEngineHolder*"] {
+
             auto icon = QIcon::fromTheme("livewallpaper", QIcon(":/assets/icon.png"));
             engine->app->setWindowIcon(icon);
 
