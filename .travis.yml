@@ -13,9 +13,12 @@ addons:
       - qt512declarative
       - qt512quickcontrols2
       - qt512graphicaleffects
+      - qt512tools
 install:
   - source /opt/qt512/bin/qt512-env.sh
-after_success:
+before_script:
+  - lrelease assets/i18n/*.ts
+deploy:
   - cargo build --release
   - cd linuxdeployqt.AppDir
   - cp ../target/release/biying .
