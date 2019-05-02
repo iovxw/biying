@@ -40,7 +40,7 @@ ApplicationWindow {
 
     SystemTrayIcon {
         visible: wallpapers.config.auto_change.enable
-        iconSource: "icon.png"
+        iconSource: "livewallpaper.svg"
         iconName: "livewallpaper-indicator"
 
         onActivated: {

@@ -34,7 +34,8 @@ qrc! { init_ressource,
          "assets/WallpaperFlow.qml",
          "assets/SettingPage.qml",
          "assets/background.png",
-         "assets/icon.png",
+         "assets/livewallpaper.svg",
+         "assets/emblem-favorite-symbolic.svg",
          "assets/i18n/zh_CN.qm",
      },
 }
@@ -57,7 +58,7 @@ fn main() {
             translator.load(QLocale::system(), "", "", ":/assets/i18n");
             QApplication::installTranslator(&translator);
 
-            auto icon = QIcon::fromTheme("livewallpaper", QIcon(":/assets/icon.png"));
+            auto icon = QIcon::fromTheme("livewallpaper", QIcon(":/assets/livewallpaper.svg"));
             engine->app->setWindowIcon(icon);
 
             engine->app->setQuitOnLastWindowClosed(false);

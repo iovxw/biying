@@ -55,6 +55,7 @@ GridView {
                 height: parent.height / 4
                 width: height
                 icon.name: "emblem-favorite-symbolic"
+                icon.source: "emblem-favorite-symbolic.svg"
                 icon.color: if (model.like) { "red" } else { "white"  }
                 icon.width: width
                 icon.height: height
@@ -166,6 +167,7 @@ GridView {
             Button {
                 id: popupBtn2
                 icon.name: "emblem-favorite-symbolic"
+                icon.source: "emblem-favorite-symbolic.svg"
                 icon.color: if (model.like) { "red" } else { "white"  }
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
