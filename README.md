@@ -16,7 +16,7 @@ Rust Nightly 2019-04-25
  - `qtdeclarative5-dev` >= 5.10
 
 ### Arch Linux
- -`qt5-declarative`
+ - `qt5-declarative`
 
 ## Runtime Dependencies
 

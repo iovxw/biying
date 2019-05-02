@@ -4,5 +4,5 @@ Name=Biying
 Exec=biying
 Icon=livewallpaper
 Comment=Biying Wallpaper for Linux
-Categories=Utils
+Categories=Qt;Settings;DesktopSettings;
 X-AppImage-Version=dc0edf2
