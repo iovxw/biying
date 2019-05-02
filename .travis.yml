@@ -14,6 +14,7 @@ addons:
       - qt512quickcontrols2
       - qt512graphicaleffects
       - qt512tools
+      - fcitx-frontend-qt5
 install:
   - source /opt/qt512/bin/qt512-env.sh
 before_script:
