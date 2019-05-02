@@ -6,3 +6,6 @@ Icon=livewallpaper
 Comment=Biying Wallpaper for Linux
 Categories=Qt;Settings;DesktopSettings;
 X-AppImage-Version=dc0edf2
+
+Name[zh_CN]=碧影壁纸
+Comment[zh_CN]=碧影壁纸 for Linux
