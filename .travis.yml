@@ -19,7 +19,7 @@ install:
   - source /opt/qt512/bin/qt512-env.sh
 before_script:
   - lrelease assets/i18n/*.ts
-deploy:
+after_script:
   - cargo build --release
   - cd linuxdeployqt.AppDir
   - cp ../target/release/biying .
