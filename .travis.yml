@@ -15,7 +15,9 @@ addons:
       - qt512graphicaleffects
       - qt512svg
       - qt512tools
+      # Qt plugins
       - fcitx-frontend-qt5
+      - qt5-style-plugins
 install:
   - source /opt/qt512/bin/qt512-env.sh
 before_script:
