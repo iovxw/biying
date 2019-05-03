@@ -13,6 +13,7 @@ addons:
       - qt512declarative
       - qt512quickcontrols2
       - qt512graphicaleffects
+      - qt512svg
       - qt512tools
       - fcitx-frontend-qt5
 install:
@@ -24,6 +25,7 @@ after_script:
   - cd linuxdeployqt.AppDir
   - cp ../target/release/biying .
   - cp ../assets/livewallpaper.svg .
+  - cp -npr /usr/lib/x86_64-linux-gnu/qt5/plugins/ $QDIR/plugins/
   - wget -c -nv "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
   - chmod +x ./linuxdeployqt-continuous-x86_64.AppImage
   - ./linuxdeployqt-continuous-x86_64.AppImage biying.desktop -appimage -no-translations -no-copy-copyright-files -verbose=2 -qmldir=../assets
