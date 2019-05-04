@@ -35,3 +35,10 @@ after_script:
   - ./linuxdeployqt-continuous-x86_64.AppImage biying.desktop -appimage -no-translations -no-copy-copyright-files -verbose=2 -qmldir=../assets -extra-plugins=styles/libkvantum.so
   - export FILE=`ls -t *.AppImage | head -1`
   - curl --progress-bar --upload-file $FILE https://transfer.sh/$FILE
+deploy:
+  provider: releases
+  api_key: "$GITHUB_OAUTH_TOKEN"
+  file: "$FILE"
+  skip_cleanup: true
+  on:
+    tags: true
