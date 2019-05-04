@@ -109,6 +109,7 @@ Rectangle {
                             Layout.alignment: Qt.AlignRight
                             SpinBox {
                                 enabled: autoChangeWallpaperBtn.checked
+                                value: 1
                                 Component.onCompleted: value = wallpapers.config.auto_change.interval
                                 onValueChanged: wallpapers.config.auto_change.interval = value
                                 from: 1
@@ -213,6 +214,7 @@ Rectangle {
                             Layout.columnSpan: 2
                             Layout.alignment: Qt.AlignRight
                             SpinBox {
+                                value: 1
                                 Component.onCompleted: value = wallpapers.config.autoremove
                                 onValueChanged: wallpapers.config.autoremove = value
                                 from: 1
