@@ -8,6 +8,7 @@ addons:
   apt:
     sources:
       - sourceline: 'ppa:beineri/opt-qt-5.12.1-xenial'
+      - sourceline: 'ppa:papirus/papirus'
     packages:
       - mesa-common-dev
       - qt512declarative
