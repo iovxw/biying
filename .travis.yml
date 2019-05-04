@@ -18,6 +18,7 @@ addons:
       # Qt plugins
       - fcitx-frontend-qt5
       - qt5-style-plugins
+      - qt5-style-kvantum
 install:
   - source /opt/qt512/bin/qt512-env.sh
 before_script:
@@ -30,6 +31,6 @@ after_script:
   - sudo cp -vnpr /usr/lib/x86_64-linux-gnu/qt5/plugins/ $QTDIR/plugins/
   - wget -c -nv "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
   - chmod +x ./linuxdeployqt-continuous-x86_64.AppImage
-  - ./linuxdeployqt-continuous-x86_64.AppImage biying.desktop -appimage -no-translations -no-copy-copyright-files -verbose=2 -qmldir=../assets
+  - ./linuxdeployqt-continuous-x86_64.AppImage biying.desktop -appimage -no-translations -no-copy-copyright-files -verbose=2 -qmldir=../assets -extra-plugins=styles/libkvantum.so
   - export FILE=`ls -t *.AppImage | head -1`
   - curl --progress-bar --upload-file $FILE https://transfer.sh/$FILE
