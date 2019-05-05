@@ -32,6 +32,7 @@ before_deploy:
   - sudo cp -vnpr /usr/lib/x86_64-linux-gnu/qt5/plugins/* $QTDIR/plugins/
   - wget -c -nv "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
   - chmod +x ./linuxdeployqt-continuous-x86_64.AppImage
+  - export VERSION=`git describe --tags`
   - ./linuxdeployqt-continuous-x86_64.AppImage biying.desktop -appimage -no-translations -no-copy-copyright-files -verbose=2 -qmldir=../assets -extra-plugins=styles/libkvantum.so
   - export FILE=`ls -t *.AppImage | head -1`
 deploy:
