@@ -9,6 +9,7 @@ addons:
     sources:
       - sourceline: 'ppa:beineri/opt-qt-5.12.1-xenial'
       - sourceline: 'ppa:papirus/papirus'
+      - sourceline: 'ppa:hda-me/qt5ct'
     packages:
       - mesa-common-dev
       - qt512declarative
@@ -20,6 +21,10 @@ addons:
       - fcitx-frontend-qt5
       - qt5-style-plugins
       - qt5-style-kvantum
+      - kde-style-breeze
+      - kde-style-qtcurve-qt5
+      - kde-style-oxygen-qt5
+      - qt5ct
 install:
   - source /opt/qt512/bin/qt512-env.sh
 before_script:
@@ -33,7 +38,7 @@ before_deploy:
   - cp ../assets/livewallpaper.svg .
   - sudo cp -vnpr /usr/lib/x86_64-linux-gnu/qt5/plugins/* $QTDIR/plugins/
   - export VERSION=`git describe --tags`
-  - ../linuxdeployqt-continuous-x86_64.AppImage biying.desktop -appimage -no-translations -no-copy-copyright-files -verbose=2 -qmldir=../assets -extra-plugins=styles/libkvantum.so
+  - ../linuxdeployqt-continuous-x86_64.AppImage biying.desktop -appimage -no-translations -no-copy-copyright-files -verbose=2 -qmldir=../assets -extra-plugins=styles/libkvantum.so,styles/breeze.so,styles/qtcurve.so,styles/oxygen.so,platformthemes/libqt5ct.so,libqt5ct-style.so
   - export FILE=`ls -t *.AppImage | head -1`
 deploy:
   provider: releases
