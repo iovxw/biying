@@ -1,0 +1,3 @@
+[submodule "assets/variety"]
+	path = assets/variety
+	url = https://github.com/varietywalls/variety.git
