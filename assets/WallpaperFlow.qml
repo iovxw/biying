@@ -130,20 +130,15 @@ GridView {
                     visible: wallpaperImageArea.containsMouse
 
                     ListView {
-                        model: ListModel {
-                            id: infoModel
-                        }
+                        model: metas
                         anchors.fill: parent
                         anchors.margins: popup.padding
                         clip: true
                         delegate: Text {
                             color: "white"
-                            text: model.market + ": " + model.info
+                            // https://bugreports.qt.io/browse/QTBUG-49983
+                            text: modelData.market + ": " + modelData.info
                         }
-                    }
-                    Component.onCompleted: {
-                        // a workaround
-                        infoModel.append(model.metas)
                     }
                 }
             }
