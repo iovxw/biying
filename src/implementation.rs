@@ -18,6 +18,8 @@ use serde::Deserialize;
 use crate::config::Config;
 use crate::listmodel::{MutListItem, MutListModel};
 
+const MAX_WP_NUM_IN_A_PAGE: usize = 20;
+
 #[derive(QObject, Default)]
 pub struct Wallpapers {
     base: qt_base_class!(trait QObject),
@@ -74,11 +76,13 @@ impl Wallpapers {
             ptr.as_ref().map(|p| p.error(e));
         });
         let offset = self.offset;
-        self.offset += 20;
-        thread::spawn(move || match fetch_wallpapers(offset, 20) {
-            Ok(r) => ok_callback(r),
-            Err(e) => err_callback(e.to_string().into()),
-        });
+        self.offset += MAX_WP_NUM_IN_A_PAGE;
+        thread::spawn(
+            move || match fetch_wallpapers(offset, MAX_WP_NUM_IN_A_PAGE) {
+                Ok(r) => ok_callback(r),
+                Err(e) => err_callback(e.to_string().into()),
+            },
+        );
     }
 
     pub fn next_page_favourites(&mut self) {
@@ -104,8 +108,14 @@ impl Wallpapers {
         let err_callback = queued_callback(move |e: QString| {
             ptr.as_ref().map(|p| p.error(e));
         });
-        // TODO: offset
-        let favourites: Vec<_> = self.config.borrow().likes.clone().into_iter().collect();
+
+        let favoutires = &self.config.borrow().likes;
+        let mut end = self.favourites_offset + MAX_WP_NUM_IN_A_PAGE;
+        if end > favoutires.len() {
+            end = favoutires.len();
+        }
+        let favourites = favoutires[self.favourites_offset..end].to_vec();
+        self.favourites_offset = end;
         thread::spawn(move || match fetch_wallpapers_by_id(&favourites) {
             Ok(r) => ok_callback(r),
             Err(e) => err_callback(e.to_string().into()),

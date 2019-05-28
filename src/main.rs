@@ -75,7 +75,11 @@ fn main() {
         let mut de = config.de.borrow_mut();
         let custom_cmd = &mut de.last_mut().unwrap().cmd;
         if custom_cmd.to_slice().is_empty() {
-            *custom_cmd = format!("{} \"$WALLPAPER\" auto",&*fallback_script_path.to_string_lossy()).into();
+            *custom_cmd = format!(
+                "{} \"$WALLPAPER\" auto",
+                &*fallback_script_path.to_string_lossy()
+            )
+            .into();
         }
     }
 
