@@ -106,7 +106,7 @@ GridView {
                     width: childrenRect.width + popup.padding
                     anchors.right: infolist.right
                     anchors.top: parent.top
-                    anchors.topMargin: (parent.height - parent.paintedHeight) / 2
+                    anchors.topMargin: Math.round((parent.height - parent.paintedHeight) / 2)
                     color: infolist.color
                     visible: infolist.visible
 
@@ -124,8 +124,8 @@ GridView {
                     width: parent.paintedWidth
                     anchors.left: parent.left
                     anchors.bottom: parent.bottom
-                    anchors.leftMargin: (parent.width - parent.paintedWidth) / 2
-                    anchors.bottomMargin: (parent.height - parent.paintedHeight) / 2
+                    anchors.leftMargin: Math.round((parent.width - parent.paintedWidth) / 2)
+                    anchors.bottomMargin: Math.round((parent.height - parent.paintedHeight) / 2)
                     color: Qt.rgba(0, 0, 0, 0.3)
                     visible: wallpaperImageArea.containsMouse
 
