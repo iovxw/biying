@@ -420,18 +420,18 @@ impl<T> Try for Response<T> {
     type Error = ServerError;
     fn into_result(self) -> Result<<Response<T> as Try>::Ok, Self::Error> {
         match self {
-            Self::Ok { results } => Ok(results),
-            Self::Err { code, error } => Err(ServerError { code, error }),
+            Response::Ok { results } => Ok(results),
+            Response::Err { code, error } => Err(ServerError { code, error }),
         }
     }
     fn from_error(v: Self::Error) -> Self {
-        Self::Err {
+        Response::Err {
             code: v.code,
             error: v.error,
         }
     }
     fn from_ok(v: <Response<T> as Try>::Ok) -> Self {
-        Self::Ok { results: v }
+        Response::Ok { results: v }
     }
 }
 
