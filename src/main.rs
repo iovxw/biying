@@ -9,11 +9,13 @@ use std::io::prelude::*;
 use std::os::unix::fs::PermissionsExt;
 
 use cpp::*;
+use cstr::*;
 use qmetaobject::*;
 
 mod config;
 mod implementation;
 mod listmodel;
+mod systray;
 
 cpp! {{
     #include <memory>
@@ -45,20 +47,81 @@ qrc! { init_ressource,
 
 fn main() {
     init_ressource();
+    qml_register_type::<systray::TrayProxy>(cstr!("TrayProxy"), 1, 0, cstr!("TrayProxy"));
 
+    systray::run_tray_in_background();
+
+    let mut engine = create_engine();
+    loop {
+        let wallpapers = QObjectBox::new(create_wallpapers());
+        let wallpapers = wallpapers.pinned();
+
+        engine.set_object_property("wallpapers".into(), wallpapers.clone());
+        engine.load_file("qrc:/assets/main.qml".into());
+
+        engine.exec();
+        wallpapers
+            .borrow()
+            .config
+            .borrow()
+            .save()
+            .expect("Failed to save configs");
+
+        if !wallpapers.borrow().config.borrow().auto_change.enable {
+            break;
+        }
+        let engine_ptr = &mut engine;
+        unsafe {
+            cpp!([engine_ptr as "QmlEngineHolder*"] {
+                engine_ptr->engine->collectGarbage();
+                engine_ptr->engine->clearComponentCache();
+                delete engine_ptr->engine.release();
+            });
+        }
+
+        match systray::wait() {
+            systray::Cmd::Open => {
+                unsafe {
+                    cpp!([engine_ptr as "QmlEngineHolder*"] {
+                        engine_ptr->engine.reset(new QQmlApplicationEngine);
+                    });
+                }
+                continue;
+            }
+            systray::Cmd::Quit => break,
+        }
+    }
+
+    std::thread::sleep_ms(10000);
+}
+
+fn create_engine() -> QmlEngine {
+    let mut engine = QmlEngine::new();
+    let engine_ptr = &mut engine;
+    unsafe {
+        cpp!([engine_ptr as "QmlEngineHolder*"] {
+            QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+
+            translator.load(QLocale::system(), "", "", ":/assets/i18n");
+            QApplication::installTranslator(&translator);
+
+            auto icon = QIcon::fromTheme("livewallpaper", QIcon(":/assets/livewallpaper.svg"));
+            engine_ptr->app->setWindowIcon(icon);
+        });
+    }
+    engine
+}
+
+fn create_wallpapers() -> implementation::Wallpapers {
     let set_wallpaper_fallback = include_bytes!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/assets/variety/data/scripts/set_wallpaper"
     ));
 
-    let mut engine = QmlEngine::new();
-
     let wallpapers = implementation::Wallpapers::new();
-    let wallpapers = QObjectBox::new(wallpapers);
-    let wallpapers = wallpapers.pinned();
 
     {
-        let config = &wallpapers.borrow().config.borrow();
+        let config = &wallpapers.config.borrow();
         if !config.cache_dir.exists() {
             fs::create_dir_all(&config.cache_dir).expect("create cache_dir");
         }
@@ -82,28 +145,5 @@ fn main() {
         }
     }
 
-    engine.set_object_property("wallpapers".into(), wallpapers);
-
-    let engine = &mut engine;
-    unsafe {
-        cpp!([engine as "QmlEngineHolder*"] {
-            QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-
-            translator.load(QLocale::system(), "", "", ":/assets/i18n");
-            QApplication::installTranslator(&translator);
-
-            auto icon = QIcon::fromTheme("livewallpaper", QIcon(":/assets/livewallpaper.svg"));
-            engine->app->setWindowIcon(icon);
-
-            engine->app->setQuitOnLastWindowClosed(false);
-        });
-    }
-    engine.load_file("qrc:/assets/main.qml".into());
-    engine.exec();
     wallpapers
-        .borrow()
-        .config
-        .borrow()
-        .save()
-        .expect("Failed to save configs");
 }

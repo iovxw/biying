@@ -3,6 +3,7 @@ import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.3
 import QtGraphicalEffects 1.0
 import Qt.labs.platform 1.0
+import TrayProxy 1.0
 
 ApplicationWindow {
     id: window
@@ -32,36 +33,17 @@ ApplicationWindow {
         })
     }
 
-    onClosing: {
-        if (!wallpapers.config.auto_change.enable) {
-            Qt.quit()
-        }
-    }
-
-    SystemTrayIcon {
-        visible: wallpapers.config.auto_change.enable
-        iconSource: "livewallpaper.svg"
-        iconName: "livewallpaper-indicator"
-
-        onActivated: {
+    TrayProxy {
+        onOpen: {
             window.show()
             window.raise()
             window.requestActivate()
         }
-
-        menu: Menu {
-            MenuItem {
-                text: qsTr("Open")
-                onTriggered: {
-                    window.show()
-                    window.raise()
-                    window.requestActivate()
-                }
-            }
-            MenuItem {
-                text: qsTr("Quit")
-                onTriggered: Qt.quit()
-            }
+        onQuit: {
+            Qt.quit()
+        }
+        Component.onCompleted: {
+            connect_to_backend()
         }
     }
 

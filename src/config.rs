@@ -4,12 +4,36 @@ use std::fs;
 use std::io::prelude::*;
 use std::iter::FromIterator;
 use std::path::PathBuf;
+use std::thread::panicking;
 
 use qmetaobject::*;
 use serde::{Deserialize, Serialize};
 use toml;
 
 use crate::listmodel::{MutListItem, MutListModel};
+
+#[derive(QObject, Serialize, Deserialize)]
+pub struct Config {
+    #[serde(skip)]
+    base: qt_base_class!(trait QObject),
+    #[serde(rename = "custom_cmd", with = "custom_cmd")]
+    pub de: qt_property!(RefCell<MutListModel<DesktopEnviroment>>; CONST),
+    pub de_index: qt_property!(usize; NOTIFY s1),
+    pub auto_change: qt_property!(AutoChangeConfig; NOTIFY s2),
+    pub resolution: qt_property!(Resolution; NOTIFY s3),
+    pub autoremove: qt_property!(u64; NOTIFY s4),
+    #[serde(skip)]
+    s1: qt_signal!(),
+    #[serde(skip)]
+    s2: qt_signal!(),
+    #[serde(skip)]
+    s3: qt_signal!(),
+    #[serde(skip)]
+    s4: qt_signal!(),
+    pub download_dir: PathBuf,
+    pub cache_dir: PathBuf,
+    pub likes: Vec<String>,
+}
 
 impl Config {
     pub fn open() -> Result<Self, failure::Error> {
@@ -40,29 +64,6 @@ impl Config {
             )
             .into()
     }
-}
-
-#[derive(QObject, Serialize, Deserialize)]
-pub struct Config {
-    #[serde(skip)]
-    base: qt_base_class!(trait QObject),
-    #[serde(rename = "custom_cmd", with = "custom_cmd")]
-    pub de: qt_property!(RefCell<MutListModel<DesktopEnviroment>>; CONST),
-    pub de_index: qt_property!(usize; NOTIFY s1),
-    pub auto_change: qt_property!(AutoChangeConfig; NOTIFY s2),
-    pub resolution: qt_property!(Resolution; NOTIFY s3),
-    pub autoremove: qt_property!(u64; NOTIFY s4),
-    #[serde(skip)]
-    s1: qt_signal!(),
-    #[serde(skip)]
-    s2: qt_signal!(),
-    #[serde(skip)]
-    s3: qt_signal!(),
-    #[serde(skip)]
-    s4: qt_signal!(),
-    pub download_dir: PathBuf,
-    pub cache_dir: PathBuf,
-    pub likes: Vec<String>,
 }
 
 // Only read and save the `cmd` of "Other", ignore default values
