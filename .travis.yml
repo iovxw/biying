@@ -13,6 +13,7 @@ addons:
       - sourceline: 'ppa:papirus/papirus'
       - sourceline: 'ppa:hda-me/qt5ct'
     packages:
+      - libdbus-1-dev
       - mesa-common-dev
       - qt512declarative
       - qt512quickcontrols2
