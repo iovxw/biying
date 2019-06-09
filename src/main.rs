@@ -91,8 +91,6 @@ fn main() {
             systray::Cmd::Quit => break,
         }
     }
-
-    std::thread::sleep_ms(10000);
 }
 
 fn create_engine() -> QmlEngine {

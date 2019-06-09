@@ -1,6 +1,7 @@
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 
+use image::ImageFormat;
 use ksni::{self, menu, tray};
 use qmetaobject::*;
 
@@ -69,6 +70,7 @@ impl ksni::Tray for Tray {
     fn tray_properties() -> tray::Properties {
         tray::Properties {
             icon_name: "livewallpaper-indicator".to_owned(),
+            icon_pixmap: icons(),
             ..Default::default()
         }
     }
@@ -134,4 +136,31 @@ fn quit() {
         .unwrap()
         .send(Cmd::Quit)
         .unwrap();
+}
+
+// TODO: const fn
+fn icons() -> Vec<tray::Icon> {
+    let images: &[&[u8]] = &[
+        // include_bytes!("../assets/tray-icon_16.png"),
+        include_bytes!("../assets/tray-icon_24.png"),
+        include_bytes!("../assets/tray-icon_32.png"),
+        include_bytes!("../assets/tray-icon_48.png"),
+        include_bytes!("../assets/tray-icon_64.png"),
+    ];
+    let mut icons = Vec::with_capacity(images.len());
+    for img in images.iter() {
+        let img = image::load_from_memory_with_format(img, ImageFormat::PNG).expect("");
+        let mut img = img.to_rgba();
+        let (width, height) = img.dimensions();
+        for pixel in img.pixels_mut() {
+            pixel.data.rotate_right(1);
+        }
+        let icon = tray::Icon {
+            width: width as i32,
+            height: height as i32,
+            data: img.into_raw(),
+        };
+        icons.push(icon);
+    }
+    icons
 }
