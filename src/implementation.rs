@@ -590,7 +590,7 @@ fn fetch_wallpapers(offset: usize, limit: usize) -> Result<Vec<RawImage>, failur
     let offset = offset.to_string();
     let limit = limit.to_string();
     let url = reqwest::Url::parse_with_params(
-        "https://leancloud.cn/1.1/classes/Image",
+        "https://leanapi.bohan.co/1.1/classes/Image",
         &[
             ("order", "-createdAt"),
             ("skip", &offset),
@@ -617,7 +617,7 @@ fn fetch_wallpapers_by_id<'a, I: IntoIterator<Item = T>, T: AsRef<str>>(
     let where_query = format!("{{\"$or\":[{}]}}", where_query.join(","));
 
     let url = reqwest::Url::parse_with_params(
-        "https://leancloud.cn/1.1/classes/Image",
+        "https://leanapi.bohan.co/1.1/classes/Image",
         &[("where", &where_query)],
     )
     .expect("parse url");
@@ -644,7 +644,7 @@ fn fill_wallpapers_metadata(
     let where_query = format!("{{\"$or\":[{}]}}", where_query.join(","));
 
     let url = reqwest::Url::parse_with_params(
-        "https://leancloud.cn/1.1/classes/Archive",
+        "https://leanapi.bohan.co/1.1/classes/Archive",
         // Default limit is 100, maximum is 1000
         &[("where", &*where_query), ("limit", "1000")],
     )
