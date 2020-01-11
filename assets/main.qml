@@ -71,10 +71,10 @@ ApplicationWindow {
 
         Item {
             WallpaperFlow {
-                model: wallpapers.favourites
-                loading: wallpapers.favourites_loading
+                model: wallpapers.favorites
+                loading: wallpapers.favorites_loading
                 onNextPage: {
-                    wallpapers.next_page_favourites()
+                    wallpapers.next_page_favorites()
                 }
                 onDownload: {
                     wallpapers.download(index, true)
