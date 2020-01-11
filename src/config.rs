@@ -4,7 +4,6 @@ use std::fs;
 use std::io::prelude::*;
 use std::iter::FromIterator;
 use std::path::PathBuf;
-use std::thread::panicking;
 
 use qmetaobject::*;
 use serde::{Deserialize, Serialize};

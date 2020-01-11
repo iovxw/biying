@@ -134,8 +134,8 @@ impl Wallpapers {
                 };
                 list[index].image = ("file:".to_owned() + &v).into();
                 list[index].loading = false;
-                let idx = (&mut *list as &mut QAbstractListModel).row_index(index as i32);
-                (&mut *list as &mut QAbstractListModel).data_changed(idx, idx);
+                let idx = (&mut *list as &mut dyn QAbstractListModel).row_index(index as i32);
+                (&mut *list as &mut dyn QAbstractListModel).data_changed(idx, idx);
             });
         });
         let err_callback = queued_callback(move |e: String| eprintln!("{}", e));
@@ -154,8 +154,8 @@ impl Wallpapers {
             config.resolution.download[config.resolution.download_index].to_qbytearray();
         let download_dir = config.download_dir.clone();
 
-        let idx = (&mut *list as &mut QAbstractListModel).row_index(index as i32);
-        (&mut *list as &mut QAbstractListModel).data_changed(idx, idx);
+        let idx = (&mut *list as &mut dyn QAbstractListModel).row_index(index as i32);
+        (&mut *list as &mut dyn QAbstractListModel).data_changed(idx, idx);
 
         thread::spawn(move || {
             let resolution = resolution.to_str().unwrap();
@@ -196,7 +196,7 @@ impl Wallpapers {
         self.set_wallpaper_cmd(&file);
     }
 
-    pub fn like(&mut self, mut index: usize, in_favorites_page: bool) {
+    pub fn like(&mut self, index: usize, in_favorites_page: bool) {
         // NOTE: `self.favorites` is favorites in favorites page, not all favorites
         // `self.config.likes` is the full list
 
@@ -233,15 +233,12 @@ impl Wallpapers {
                 self.favorites_offset += 1;
             }
 
-            let idx = (wallpapers as &mut QAbstractListModel).row_index(index as i32);
-            (wallpapers as &mut QAbstractListModel).data_changed(idx, idx);
+            let idx = (wallpapers as &mut dyn QAbstractListModel).row_index(index as i32);
+            (wallpapers as &mut dyn QAbstractListModel).data_changed(idx, idx);
         }
 
         if !favorited {
-            self.config
-                .borrow_mut()
-                .likes
-                .insert(0, id);
+            self.config.borrow_mut().likes.insert(0, id);
         } else {
             self.config.borrow_mut().likes.remove_item(&id);
         }
