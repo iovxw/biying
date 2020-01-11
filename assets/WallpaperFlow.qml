@@ -52,16 +52,25 @@ GridView {
             }
 
             Button {
+                id: likeBtn
                 height: parent.height / 4
                 width: height
                 icon.name: "emblem-favorite-symbolic"
                 icon.source: "emblem-favorite-symbolic.svg"
-                icon.color: if (model.like) { "red" } else { "white"  }
                 icon.width: width
                 icon.height: height
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 onClicked: likeClicked(index)
+                states: [
+                    State {
+                        when: model.like
+                        PropertyChanges {
+                            target: likeBtn
+                            icon.color: "red"
+                        }
+                    }
+                ]
             }
         }
 
@@ -163,10 +172,18 @@ GridView {
                 id: popupBtn2
                 icon.name: "emblem-favorite-symbolic"
                 icon.source: "emblem-favorite-symbolic.svg"
-                icon.color: if (model.like) { "red" } else { "white"  }
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 onClicked: likeClicked(index)
+                states: [
+                    State {
+                        when: model.like
+                        PropertyChanges {
+                            target: popupBtn2
+                            icon.color: "red"
+                        }
+                    }
+                ]
             }
         }
     }
