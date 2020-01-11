@@ -26,24 +26,24 @@ pub struct Wallpapers {
     base: qt_base_class!(trait QObject),
     pub error: qt_signal!(err: QString),
     pub list: qt_property!(RefCell<MutListModel<QWallpaper>>; CONST),
-    pub favourites: qt_property!(RefCell<MutListModel<QWallpaper>>; CONST),
+    pub favorites: qt_property!(RefCell<MutListModel<QWallpaper>>; CONST),
     pub list_loading: qt_property!(bool; NOTIFY list_loading_changed),
     pub list_loading_changed: qt_signal!(),
-    pub favourites_loading: qt_property!(bool; NOTIFY favourites_loading_changed),
-    pub favourites_loading_changed: qt_signal!(),
+    pub favorites_loading: qt_property!(bool; NOTIFY favorites_loading_changed),
+    pub favorites_loading_changed: qt_signal!(),
     pub fetch_next_page: qt_method!(fn (&self)),
-    pub next_page_favourites: qt_method!(fn (&self)),
-    pub download: qt_method!(fn (&mut self, index: usize, in_favourites: bool)),
-    pub like: qt_method!(fn (&mut self, index: usize, in_favourites: bool)),
-    pub set_wallpaper: qt_method!(fn (&self, index: usize, in_favourites: bool)),
+    pub next_page_favorites: qt_method!(fn (&self)),
+    pub download: qt_method!(fn (&mut self, index: usize, in_favorites_page: bool)),
+    pub like: qt_method!(fn (&mut self, index: usize, in_favorites_page: bool)),
+    pub set_wallpaper: qt_method!(fn (&self, index: usize, in_favorites_page: bool)),
     pub next_wallpaper: qt_method!(fn (&self)),
     pub diskusage_others: qt_property!(u64; NOTIFY diskusage_changed),
-    pub diskusage_favourites: qt_property!(u64; NOTIFY diskusage_changed),
+    pub diskusage_favorites: qt_property!(u64; NOTIFY diskusage_changed),
     pub diskusage_changed: qt_signal!(),
     pub clear_other_wallpapers: qt_method!(fn (&mut self)),
     pub config: qt_property!(RefCell<Config>; CONST),
     offset: usize,
-    favourites_offset: usize,
+    favorites_offset: usize,
 }
 
 impl Wallpapers {
@@ -86,12 +86,12 @@ impl Wallpapers {
         );
     }
 
-    pub fn next_page_favourites(&mut self) {
-        if self.favourites.borrow().len() == self.config.borrow().likes.len() {
+    pub fn next_page_favorites(&mut self) {
+        if self.favorites.borrow().len() == self.config.borrow().likes.len() {
             return;
         }
-        self.favourites_loading = true;
-        self.favourites_loading_changed();
+        self.favorites_loading = true;
+        self.favorites_loading_changed();
         let ptr = QPointer::from(&*self);
         let ok_callback = queued_callback(move |images: Vec<RawImage>| {
             ptr.as_ref().map(|p| {
@@ -99,10 +99,10 @@ impl Wallpapers {
                 for img in images {
                     let mut wallpaper: QWallpaper = (&img).into();
                     wallpaper.like = true;
-                    mutp.favourites.borrow_mut().push(wallpaper);
+                    mutp.favorites.borrow_mut().push(wallpaper);
                 }
-                mutp.favourites_loading = false;
-                mutp.favourites_loading_changed();
+                mutp.favorites_loading = false;
+                mutp.favorites_loading_changed();
             });
         });
         let ptr = QPointer::from(&*self);
@@ -110,27 +110,25 @@ impl Wallpapers {
             ptr.as_ref().map(|p| p.error(e));
         });
 
-        let favoutires = &self.config.borrow().likes;
-        let mut end = self.favourites_offset + MAX_WP_NUM_IN_A_PAGE;
-        if end > favoutires.len() {
-            end = favoutires.len();
-        }
-        let favourites = favoutires[self.favourites_offset..end].to_vec();
-        self.favourites_offset = end;
-        thread::spawn(move || match fetch_wallpapers_by_id(&favourites) {
+        let favorites = &self.config.borrow().likes;
+        let mut end = self.favorites_offset + MAX_WP_NUM_IN_A_PAGE;
+        end = std::cmp::min(end, favorites.len());
+        let favorites = favorites[self.favorites_offset..end].to_vec();
+        self.favorites_offset = end;
+        thread::spawn(move || match fetch_wallpapers_by_id(&favorites) {
             Ok(r) => ok_callback(r),
             Err(e) => err_callback(e.to_string().into()),
         });
     }
 
-    pub fn download(&mut self, index: usize, in_favourites: bool) {
+    pub fn download(&mut self, index: usize, in_favorites_page: bool) {
         let ptr = QPointer::from(&*self);
         let ok_callback = queued_callback(move |v: String| {
             ptr.as_ref().map(|p| {
                 let mutp = unsafe { &mut *(p as *const _ as *mut Self) };
                 mutp.update_diskusage_and_autoclean().unwrap_or_default();
-                let mut list = if in_favourites {
-                    mutp.favourites.borrow_mut()
+                let mut list = if in_favorites_page {
+                    mutp.favorites.borrow_mut()
                 } else {
                     mutp.list.borrow_mut()
                 };
@@ -142,8 +140,8 @@ impl Wallpapers {
         });
         let err_callback = queued_callback(move |e: String| eprintln!("{}", e));
 
-        let mut list = if in_favourites {
-            self.favourites.borrow_mut()
+        let mut list = if in_favorites_page {
+            self.favorites.borrow_mut()
         } else {
             self.list.borrow_mut()
         };
@@ -168,9 +166,9 @@ impl Wallpapers {
         });
     }
 
-    pub fn set_wallpaper(&self, index: usize, in_favourites: bool) {
-        let wallpaper = &if in_favourites {
-            self.favourites.borrow()
+    pub fn set_wallpaper(&self, index: usize, in_favorites_page: bool) {
+        let wallpaper = &if in_favorites_page {
+            self.favorites.borrow()
         } else {
             self.list.borrow()
         }[index];
@@ -198,42 +196,57 @@ impl Wallpapers {
         self.set_wallpaper_cmd(&file);
     }
 
-    pub fn like(&mut self, mut index: usize, in_favourites: bool) {
-        if in_favourites {
-            let id = self.favourites.borrow()[index].id.clone();
-            self.favourites.borrow_mut().remove(index);
-            let r = linear_search_by(&self.list.borrow(), |v| v.id == id);
-            match r {
-                Some(i) => index = i,
-                None => {
-                    self.update_diskusage_and_autoclean().unwrap_or_default();
-                    return;
-                }
-            }
+    pub fn like(&mut self, mut index: usize, in_favorites_page: bool) {
+        // NOTE: `self.favorites` is favorites in favorites page, not all favorites
+        // `self.config.likes` is the full list
+
+        let id: String;
+        let main_index: Option<usize>;
+        let favorites_index: Option<usize>;
+        let favorited: bool;
+
+        if in_favorites_page {
+            id = self.favorites.borrow()[index].id.clone();
+            main_index = linear_search_by(&self.list.borrow(), |v| v.id == id);
+            favorites_index = Some(index);
+            favorited = true; // In favorites page, all wallpapres are favorited
+        } else {
+            id = self.list.borrow()[index].id.clone();
+            favorites_index = linear_search_by(&self.favorites.borrow(), |v| &*v.id == id);
+            main_index = Some(index);
+            favorited = self.list.borrow()[index].like;
         }
-        {
+
+        if let Some(index) = favorites_index {
+            self.favorites.borrow_mut().remove(index);
+            self.favorites_offset -= 1;
+        }
+
+        if let Some(index) = main_index {
             let wallpapers = &mut *self.list.borrow_mut();
-            wallpapers[index].like = !wallpapers[index].like;
-            if wallpapers[index].like {
-                self.config
-                    .borrow_mut()
-                    .likes
-                    .insert(0, wallpapers[index].id.clone());
-                self.favourites
+            wallpapers[index].like = !favorited;
+
+            if !favorited {
+                self.favorites
                     .borrow_mut()
                     .insert(0, wallpapers[index].clone());
-            } else {
-                let id = &wallpapers[index].id;
-                self.config.borrow_mut().likes.remove_item(id);
-                let i = linear_search_by(&self.favourites.borrow(), |v| &*v.id == id);
-                if let Some(i) = i {
-                    self.favourites.borrow_mut().remove(i);
-                }
+                self.favorites_offset += 1;
             }
-            self.config.borrow().save().expect("Failed to save config!");
+
             let idx = (wallpapers as &mut QAbstractListModel).row_index(index as i32);
             (wallpapers as &mut QAbstractListModel).data_changed(idx, idx);
         }
+
+        if !favorited {
+            self.config
+                .borrow_mut()
+                .likes
+                .insert(0, id);
+        } else {
+            self.config.borrow_mut().likes.remove_item(&id);
+        }
+        self.config.borrow().save().expect("Failed to save config!");
+
         self.update_diskusage_and_autoclean().unwrap_or_default();
     }
 
@@ -291,7 +304,7 @@ impl Wallpapers {
 
                     self.set_wallpaper_cmd(&path);
                 }
-                // Favourites
+                // Favorites
                 1 => {
                     let idx = rand::random::<usize>() % config.likes.len();
                     let id = &config.likes[idx];
@@ -354,7 +367,7 @@ impl Wallpapers {
     fn update_diskusage_and_autoclean(&mut self) -> Result<(), failure::Error> {
         let config = self.config.borrow();
         let download_dir = fs::read_dir(&config.download_dir)?;
-        let mut favourites = 0;
+        let mut favorites = 0;
         let mut others = 0;
         for entry in download_dir {
             let entry = entry?;
@@ -374,15 +387,15 @@ impl Wallpapers {
                 .into_string()
                 .expect("file name to String");
             if let Some((id, res)) = parse_wallpaper_filename(&name) {
-                let favourited = config.likes.iter().any(|x| x == id);
+                let favorited = config.likes.iter().any(|x| x == id);
                 let resolution =
                     config.resolution.download[config.resolution.download_index].to_qbytearray();
                 let resolution = resolution.to_str().unwrap();
                 let file_size = metadata.len();
-                if res != resolution || (outdated && !favourited) {
+                if res != resolution || (outdated && !favorited) {
                     fs::remove_file(entry.path())?;
-                } else if favourited {
-                    favourites += file_size;
+                } else if favorited {
+                    favorites += file_size;
                 } else {
                     others += file_size;
                 }
@@ -391,7 +404,7 @@ impl Wallpapers {
                 fs::remove_file(entry.path())?;
             };
         }
-        self.diskusage_favourites = favourites;
+        self.diskusage_favorites = favorites;
         self.diskusage_others = others;
         self.diskusage_changed();
         Ok(())
