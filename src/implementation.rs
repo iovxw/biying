@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fs;
 use std::iter::FromIterator;
 use std::ops::Try;
@@ -92,12 +93,12 @@ impl Wallpapers {
         self.favourites_loading = true;
         self.favourites_loading_changed();
         let ptr = QPointer::from(&*self);
-        let ok_callback = queued_callback(move |v: Vec<RawImage>| {
+        let ok_callback = queued_callback(move |images: Vec<RawImage>| {
             ptr.as_ref().map(|p| {
                 let mutp = unsafe { &mut *(p as *const _ as *mut Self) };
-                for v in v {
-                    let mut wallpaper: QWallpaper = (&v).into();
-                    wallpaper.like = p.config.borrow().likes.iter().any(|x| x == &wallpaper.id);
+                for img in images {
+                    let mut wallpaper: QWallpaper = (&img).into();
+                    wallpaper.like = true;
                     mutp.favourites.borrow_mut().push(wallpaper);
                 }
                 mutp.favourites_loading = false;
@@ -605,13 +606,13 @@ fn fetch_wallpapers(offset: usize, limit: usize) -> Result<Vec<RawImage>, failur
     fill_wallpapers_metadata(&client, images)
 }
 
-fn fetch_wallpapers_by_id<'a, I: IntoIterator<Item = T>, T: AsRef<str>>(
-    id_list: I,
+fn fetch_wallpapers_by_id<'a, T: AsRef<str>>(
+    id_list: &[T],
 ) -> Result<Vec<RawImage>, failure::Error> {
     let client = build_client();
 
     let where_query: Vec<String> = id_list
-        .into_iter()
+        .iter()
         .map(|img| format!(r#"{{"objectId":"{}"}}"#, img.as_ref()))
         .collect();
     let where_query = format!("{{\"$or\":[{}]}}", where_query.join(","));
@@ -623,7 +624,14 @@ fn fetch_wallpapers_by_id<'a, I: IntoIterator<Item = T>, T: AsRef<str>>(
     .expect("parse url");
 
     let resp: Response<RawImage> = client.get(url).send()?.json()?;
-    let images = resp?;
+    let mut images = resp?;
+    // Keep the order
+    let id_index: HashMap<&str, usize> = id_list
+        .iter()
+        .enumerate()
+        .map(|(index, id)| (id.as_ref(), index))
+        .collect();
+    images.sort_by_key(|img| id_index.get(&*img.object_id));
 
     fill_wallpapers_metadata(&client, images)
 }
