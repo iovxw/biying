@@ -73,19 +73,12 @@ fn main() {
         let engine_ptr = &mut engine;
         unsafe {
             cpp!([engine_ptr as "QmlEngineHolder*"] {
-                engine_ptr->engine->collectGarbage();
-                engine_ptr->engine->clearComponentCache();
-                delete engine_ptr->engine.release();
+                engine_ptr->engine.reset(new QQmlApplicationEngine);
             });
         }
 
         match systray::wait() {
             systray::Cmd::Open => {
-                unsafe {
-                    cpp!([engine_ptr as "QmlEngineHolder*"] {
-                        engine_ptr->engine.reset(new QQmlApplicationEngine);
-                    });
-                }
                 continue;
             }
             systray::Cmd::Quit => break,
