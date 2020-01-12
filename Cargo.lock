@@ -81,7 +81,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "biying"
-version = "1.1.0"
+version = "1.1.1"
 dependencies = [
  "chrono 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "cpp 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
