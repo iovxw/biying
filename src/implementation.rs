@@ -20,6 +20,7 @@ use crate::config::Config;
 use crate::listmodel::{MutListItem, MutListModel};
 
 const MAX_WP_NUM_IN_A_PAGE: usize = 20;
+const ORIGINAL_RESOLUTION: &str = "1920x1200";
 
 #[derive(QObject, Default)]
 pub struct Wallpapers {
@@ -153,13 +154,14 @@ impl Wallpapers {
         let resolution =
             config.resolution.download[config.resolution.download_index].to_qbytearray();
         let download_dir = config.download_dir.clone();
+        let try_original = wp.wp && config.resolution.original;
 
         let idx = (&mut *list as &mut dyn QAbstractListModel).row_index(index as i32);
         (&mut *list as &mut dyn QAbstractListModel).data_changed(idx, idx);
 
         thread::spawn(move || {
             let resolution = resolution.to_str().unwrap();
-            match download_image(&id, &urlbase, resolution, &download_dir) {
+            match download_image(&id, &urlbase, resolution, &download_dir, try_original) {
                 Ok(path) => ok_callback(path),
                 Err(e) => err_callback(e.to_string()),
             }
@@ -178,11 +180,13 @@ impl Wallpapers {
             config.resolution.download[config.resolution.download_index].to_qbytearray();
         let resolution = resolution.to_str().unwrap();
 
+        // FIXME: async
         let file = download_image(
             &wallpaper.id,
             &wallpaper.urlbase,
             resolution,
             &self.config.borrow().download_dir,
+            wallpaper.wp && config.resolution.original,
         );
 
         let file = match file {
@@ -297,6 +301,7 @@ impl Wallpapers {
                         &wallpaper.urlbase,
                         resolution,
                         &config.download_dir,
+                        wallpaper.wp && config.resolution.original,
                     )?;
 
                     self.set_wallpaper_cmd(&path);
@@ -315,6 +320,7 @@ impl Wallpapers {
                         &wallpaper.urlbase,
                         resolution,
                         &config.download_dir,
+                        wallpaper.wp && config.resolution.original,
                     )?;
                     self.set_wallpaper_cmd(&path);
                 }
@@ -326,7 +332,11 @@ impl Wallpapers {
                         .filter(|(_path, name)| {
                             let name = name.to_string_lossy();
                             parse_wallpaper_filename(&name)
-                                .map(|(_, res)| res == resolution)
+                                // TODO
+                                .map(|(_, res)| {
+                                    (res == ORIGINAL_RESOLUTION && config.resolution.original)
+                                        || res == resolution
+                                })
                                 .unwrap_or(false)
                         })
                         .map(|(path, _name)| path)
@@ -389,7 +399,10 @@ impl Wallpapers {
                     config.resolution.download[config.resolution.download_index].to_qbytearray();
                 let resolution = resolution.to_str().unwrap();
                 let file_size = metadata.len();
-                if res != resolution || (outdated && !favorited) {
+                // TODO
+                let valid_resolution =
+                    (res == ORIGINAL_RESOLUTION && config.resolution.original) || res == resolution;
+                if !valid_resolution || (outdated && !favorited) {
                     fs::remove_file(entry.path())?;
                 } else if favorited {
                     favorites += file_size;
@@ -541,23 +554,34 @@ fn download_image(
     urlbase: &str,
     resolution: &str,
     output_dir: &PathBuf,
+    try_original: bool,
 ) -> Result<String, failure::Error> {
-    let output = output_dir.join(format!("{}_{}.jpg", id, resolution));
-    if !output.exists() {
-        let mut r = reqwest::get(&format!(
-            "https://wpdn.bohan.co{}_{}.jpg",
-            urlbase, resolution
-        ))?;
-        if !r.status().is_success() {
-            return Err(format_err!("Server Error: {}", r.status()));
-        }
-        if !output_dir.exists() {
-            fs::create_dir_all(&output_dir)?;
-        }
-        let mut file = fs::File::create(&output)?;
-        r.copy_to(&mut file)?;
+    let mut resolutions: &[&str] = &[resolution];
+    if try_original && resolution == "1920x1080" {
+        resolutions = &["1920x1200", "1920x1080"];
     }
-    Ok(output.to_string_lossy().into())
+    for resolution in resolutions {
+        let output = output_dir.join(format!("{}_{}.jpg", id, resolution));
+        if !output.exists() {
+            let mut r = reqwest::get(&format!(
+                "https://wpdn.bohan.co{}_{}.jpg",
+                urlbase, resolution
+            ))?;
+            if r.status() == reqwest::StatusCode::NOT_FOUND {
+                continue;
+            }
+            if !r.status().is_success() {
+                return Err(format_err!("Server Error: {}", r.status()));
+            }
+            if !output_dir.exists() {
+                fs::create_dir_all(&output_dir)?;
+            }
+            let mut file = fs::File::create(&output)?;
+            r.copy_to(&mut file)?;
+        }
+        return Ok(output.to_string_lossy().into());
+    }
+    unreachable!()
 }
 
 impl From<&RawImage> for QWallpaper {

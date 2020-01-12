@@ -215,6 +215,8 @@ pub struct Resolution {
     #[serde(skip, default = "default_download")]
     pub download: qt_property!(QVariantList),
     pub download_index: qt_property!(usize),
+    #[serde(default)] // for compatibility
+    pub original: qt_property!(bool),
 }
 
 impl Default for Resolution {
@@ -224,6 +226,7 @@ impl Default for Resolution {
             preview_index: 0,
             download: default_download(),
             download_index: 0,
+            original: false,
         }
     }
 }

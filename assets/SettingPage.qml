@@ -145,6 +145,7 @@ Rectangle {
                                     Layout.alignment: Qt.AlignHCenter
                                     Component.onCompleted: checked = wallpapers.config.auto_change.mode == 2
                                     onCheckedChanged: wallpapers.config.auto_change.mode = 2
+                                    // TODO: rename to downloaded
                                     text: qsTr("Random")
                                 }
                             }
@@ -156,26 +157,43 @@ Rectangle {
                     title: qsTr("Resolution")
                     Layout.fillWidth: true
 
-                    RowLayout {
+                    GridLayout {
                         width: parent.width
+                        columns: 4
 
                         Label {
                             text: qsTr("Preview")
                         }
                         ComboBox {
                             currentIndex: 0
+                            Layout.alignment: Qt.AlignHCenter
                             Component.onCompleted: currentIndex = wallpapers.config.resolution.preview_index
                             onCurrentIndexChanged: wallpapers.config.resolution.preview_index = currentIndex
                             model: wallpapers.config.resolution.preview
                         }
                         Label {
                             text: qsTr("Download")
+                            Layout.alignment: Qt.AlignHCenter
                         }
                         ComboBox {
+                            id: downloadResolution
+                            Layout.alignment: Qt.AlignRight
                             currentIndex: 0
                             Component.onCompleted: currentIndex = wallpapers.config.resolution.download_index
                             onCurrentIndexChanged: wallpapers.config.resolution.download_index = currentIndex
                             model: wallpapers.config.resolution.download
+                        }
+
+                        Label {
+                            Layout.columnSpan: 3
+                            visible: downloadResolution.currentIndex == 0
+                            text: qsTr("Download the original image (if possible)")
+                        }
+                        Switch {
+                            visible: downloadResolution.currentIndex == 0
+                            Layout.alignment: Qt.AlignRight
+                            Component.onCompleted: checked = wallpapers.config.resolution.original
+                            onCheckedChanged: wallpapers.config.resolution.original = checked
                         }
                     }
                 }
