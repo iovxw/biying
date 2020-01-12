@@ -194,7 +194,7 @@ Rectangle {
                             Layout.preferredWidth: 1
                         }
                         Label {
-                            text: formatBytes(wallpapers.diskusage_favourites)
+                            text: formatBytes(wallpapers.diskusage_favorites)
                             Layout.preferredWidth: 1
                         }
                         Label {
