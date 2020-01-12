@@ -32,6 +32,7 @@ cpp! {{
     };
 }}
 
+#[cfg(not(debug_assertions))]
 qrc! { init_ressource,
      "/" {
          "assets/main.qml",
@@ -45,6 +46,7 @@ qrc! { init_ressource,
 }
 
 fn main() {
+    #[cfg(not(debug_assertions))]
     init_ressource();
     qml_register_type::<systray::TrayProxy>(cstr!("TrayProxy"), 1, 0, cstr!("TrayProxy"));
 
@@ -56,7 +58,12 @@ fn main() {
         let wallpapers = wallpapers.pinned();
 
         engine.set_object_property("wallpapers".into(), wallpapers.clone());
-        engine.load_file("qrc:/assets/main.qml".into());
+        engine.load_file(
+            #[cfg(debug_assertions)]
+            concat!(env!("CARGO_MANIFEST_DIR"), "/assets/main.qml").into(),
+            #[cfg(not(debug_assertions))]
+            "qrc:/assets/main.qml".into(),
+        );
 
         engine.exec();
         wallpapers

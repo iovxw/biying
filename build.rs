@@ -34,6 +34,7 @@ fn main() {
     cpp_build::Config::new()
         .include(qt_include_path.trim())
         .build("src/main.rs");
+    println!("cargo:rerun-if-changed=src/main.rs");
 
     let macos_lib_search = if cfg!(target_os = "macos") {
         "=framework"
