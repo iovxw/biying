@@ -11,6 +11,7 @@ use cpp::*;
 use cstr::*;
 use qmetaobject::*;
 
+mod async_utils;
 mod config;
 mod implementation;
 mod listmodel;
