@@ -5,17 +5,19 @@ use std::iter::FromIterator;
 use std::ops::Try;
 use std::path::PathBuf;
 use std::process;
-use std::thread;
 use std::time::{Duration, SystemTime};
 
 use chrono::prelude::*;
 use failure::{self, format_err, Fail};
 use lazy_static::lazy_static;
-use qmetaobject::*;
+use qmetaobject::{future::execute_async, *};
 use regex::Regex;
 use reqwest;
 use serde::Deserialize;
+use tokio::fs::File;
+use tokio::prelude::*;
 
+use crate::async_utils::enter_tokio;
 use crate::config::Config;
 use crate::listmodel::{MutListItem, MutListModel};
 
@@ -60,31 +62,33 @@ impl Wallpapers {
     pub fn fetch_next_page(&mut self) {
         self.list_loading = true;
         self.list_loading_changed();
-        let ptr = QPointer::from(&*self);
-        let ok_callback = queued_callback(move |v: Vec<RawImage>| {
-            ptr.as_ref().map(|p| {
-                let mutp = unsafe { &mut *(p as *const _ as *mut Self) };
-                for v in v {
-                    let mut wallpaper: QWallpaper = (&v).into();
-                    wallpaper.like = p.config.borrow().likes.iter().any(|x| x == &wallpaper.id);
-                    mutp.list.borrow_mut().push(wallpaper);
-                }
-                mutp.list_loading = false;
-                mutp.list_loading_changed();
-            });
-        });
-        let ptr = QPointer::from(&*self);
-        let err_callback = queued_callback(move |e: QString| {
-            ptr.as_ref().map(|p| p.error(e));
-        });
+
         let offset = self.offset;
         self.offset += MAX_WP_NUM_IN_A_PAGE;
-        thread::spawn(
-            move || match fetch_wallpapers(offset, MAX_WP_NUM_IN_A_PAGE) {
-                Ok(r) => ok_callback(r),
-                Err(e) => err_callback(e.to_string().into()),
-            },
-        );
+        let this = QPointer::from(&*self);
+        execute_async(enter_tokio(async move {
+            let this = this.as_ref().expect("");
+            match fetch_wallpapers(offset, MAX_WP_NUM_IN_A_PAGE).await {
+                Ok(images) => {
+                    let mutp = unsafe { &mut *(this as *const _ as *mut Self) };
+                    for v in images {
+                        let mut wallpaper: QWallpaper = (&v).into();
+                        wallpaper.like = mutp
+                            .config
+                            .borrow()
+                            .likes
+                            .iter()
+                            .any(|x| x == &wallpaper.id);
+                        mutp.list.borrow_mut().push(wallpaper);
+                    }
+                    mutp.list_loading = false;
+                    mutp.list_loading_changed();
+                }
+                Err(e) => {
+                    this.error(e.to_string().into());
+                }
+            }
+        }));
     }
 
     pub fn next_page_favorites(&mut self) {
@@ -93,54 +97,35 @@ impl Wallpapers {
         }
         self.favorites_loading = true;
         self.favorites_loading_changed();
-        let ptr = QPointer::from(&*self);
-        let ok_callback = queued_callback(move |images: Vec<RawImage>| {
-            ptr.as_ref().map(|p| {
-                let mutp = unsafe { &mut *(p as *const _ as *mut Self) };
-                for img in images {
-                    let mut wallpaper: QWallpaper = (&img).into();
-                    wallpaper.like = true;
-                    mutp.favorites.borrow_mut().push(wallpaper);
-                }
-                mutp.favorites_loading = false;
-                mutp.favorites_loading_changed();
-            });
-        });
-        let ptr = QPointer::from(&*self);
-        let err_callback = queued_callback(move |e: QString| {
-            ptr.as_ref().map(|p| p.error(e));
-        });
 
         let favorites = &self.config.borrow().likes;
         let mut end = self.favorites_offset + MAX_WP_NUM_IN_A_PAGE;
         end = std::cmp::min(end, favorites.len());
         let favorites = favorites[self.favorites_offset..end].to_vec();
         self.favorites_offset = end;
-        thread::spawn(move || match fetch_wallpapers_by_id(&favorites) {
-            Ok(r) => ok_callback(r),
-            Err(e) => err_callback(e.to_string().into()),
-        });
+
+        let this = QPointer::from(&*self);
+        execute_async(enter_tokio(async move {
+            let this = this.as_ref().expect("");
+            match fetch_wallpapers_by_id(&favorites).await {
+                Ok(images) => {
+                    let mutp = unsafe { &mut *(this as *const _ as *mut Self) };
+                    for img in images {
+                        let mut wallpaper: QWallpaper = (&img).into();
+                        wallpaper.like = true;
+                        mutp.favorites.borrow_mut().push(wallpaper);
+                    }
+                    mutp.favorites_loading = false;
+                    mutp.favorites_loading_changed();
+                }
+                Err(e) => {
+                    this.error(e.to_string().into());
+                }
+            }
+        }));
     }
 
     pub fn download(&mut self, index: usize, in_favorites_page: bool) {
-        let ptr = QPointer::from(&*self);
-        let ok_callback = queued_callback(move |v: String| {
-            ptr.as_ref().map(|p| {
-                let mutp = unsafe { &mut *(p as *const _ as *mut Self) };
-                mutp.update_diskusage_and_autoclean().unwrap_or_default();
-                let mut list = if in_favorites_page {
-                    mutp.favorites.borrow_mut()
-                } else {
-                    mutp.list.borrow_mut()
-                };
-                list[index].image = ("file:".to_owned() + &v).into();
-                list[index].loading = false;
-                let idx = (&mut *list as &mut dyn QAbstractListModel).row_index(index as i32);
-                (&mut *list as &mut dyn QAbstractListModel).data_changed(idx, idx);
-            });
-        });
-        let err_callback = queued_callback(move |e: String| eprintln!("{}", e));
-
         let mut list = if in_favorites_page {
             self.favorites.borrow_mut()
         } else {
@@ -159,13 +144,30 @@ impl Wallpapers {
         let idx = (&mut *list as &mut dyn QAbstractListModel).row_index(index as i32);
         (&mut *list as &mut dyn QAbstractListModel).data_changed(idx, idx);
 
-        thread::spawn(move || {
+        std::mem::drop(list);
+        let this = QPointer::from(&*self);
+        execute_async(enter_tokio(async move {
             let resolution = resolution.to_str().unwrap();
-            match download_image(&id, &urlbase, resolution, &download_dir, try_original) {
-                Ok(path) => ok_callback(path),
-                Err(e) => err_callback(e.to_string()),
+            let this = this.as_ref().expect("");
+            // Safety: is this safe?
+            let this = unsafe { &mut *(this as *const _ as *mut Self) };
+            match download_image(&id, &urlbase, resolution, &download_dir, try_original).await {
+                Ok(path) => {
+                    let mut list = if in_favorites_page {
+                        this.favorites.borrow_mut()
+                    } else {
+                        this.list.borrow_mut()
+                    };
+                    list[index].image = ("file:".to_owned() + &path).into();
+                    list[index].loading = false;
+                    let idx = (&mut *list as &mut dyn QAbstractListModel).row_index(index as i32);
+                    (&mut *list as &mut dyn QAbstractListModel).data_changed(idx, idx);
+                }
+                Err(e) => {
+                    this.error(e.to_string().into());
+                }
             }
-        });
+        }));
     }
 
     pub fn set_wallpaper(&self, index: usize, in_favorites_page: bool) {
@@ -178,26 +180,25 @@ impl Wallpapers {
         let config = self.config.borrow();
         let resolution =
             config.resolution.download[config.resolution.download_index].to_qbytearray();
-        let resolution = resolution.to_str().unwrap();
+        let id = wallpaper.id.clone();
+        let urlbase = wallpaper.urlbase.clone();
+        let download_dir = config.download_dir.clone();
+        let try_original = wallpaper.wp && config.resolution.original;
 
-        // FIXME: async
-        let file = download_image(
-            &wallpaper.id,
-            &wallpaper.urlbase,
-            resolution,
-            &self.config.borrow().download_dir,
-            wallpaper.wp && config.resolution.original,
-        );
+        let this = QPointer::from(&*self);
+        execute_async(enter_tokio(async move {
+            let resolution = resolution.to_str().unwrap();
+            let this = this.as_ref().expect("");
+            let file = download_image(&id, &urlbase, resolution, &download_dir, try_original).await;
 
-        let file = match file {
-            Ok(v) => v,
-            Err(e) => {
-                self.error(e.to_string().into());
-                return;
-            }
-        };
-
-        self.set_wallpaper_cmd(&file);
+            match file {
+                Ok(file) => set_wallpaper(&this.config.borrow(), &file),
+                Err(e) => {
+                    this.error(e.to_string().into());
+                    return;
+                }
+            };
+        }));
     }
 
     pub fn like(&mut self, index: usize, in_favorites_page: bool) {
@@ -282,93 +283,13 @@ impl Wallpapers {
     }
 
     pub fn next_wallpaper(&self) {
-        let r: Result<(), failure::Error> = try {
-            let config = self.config.borrow();
-            let resolution =
-                config.resolution.download[config.resolution.download_index].to_qbytearray();
-            let resolution = resolution.to_str().unwrap();
-            match config.auto_change.mode {
-                // Newest
-                0 => {
-                    let wallpaper = if let Some(r) = fetch_wallpapers(0, 1)?.pop() {
-                        r
-                    } else {
-                        return;
-                    };
-
-                    let path = download_image(
-                        &wallpaper.object_id,
-                        &wallpaper.urlbase,
-                        resolution,
-                        &config.download_dir,
-                        wallpaper.wp && config.resolution.original,
-                    )?;
-
-                    self.set_wallpaper_cmd(&path);
-                }
-                // Favorites
-                1 => {
-                    let idx = rand::random::<usize>() % config.likes.len();
-                    let id = &config.likes[idx];
-                    let wallpaper = if let Some(x) = fetch_wallpapers_by_id(&[id])?.pop() {
-                        x
-                    } else {
-                        return;
-                    };
-                    let path = download_image(
-                        &wallpaper.object_id,
-                        &wallpaper.urlbase,
-                        resolution,
-                        &config.download_dir,
-                        wallpaper.wp && config.resolution.original,
-                    )?;
-                    self.set_wallpaper_cmd(&path);
-                }
-                // Random
-                2 => {
-                    let mut downloaded = fs::read_dir(&config.download_dir)?
-                        .filter_map(Result::ok)
-                        .map(|entry| (entry.path(), entry.file_name()))
-                        .filter(|(_path, name)| {
-                            let name = name.to_string_lossy();
-                            parse_wallpaper_filename(&name)
-                                // TODO
-                                .map(|(_, res)| {
-                                    (res == ORIGINAL_RESOLUTION && config.resolution.original)
-                                        || res == resolution
-                                })
-                                .unwrap_or(false)
-                        })
-                        .map(|(path, _name)| path)
-                        .collect::<Vec<_>>();
-                    if downloaded.is_empty() {
-                        return;
-                    }
-
-                    let idx = rand::random::<usize>() % downloaded.len();
-
-                    let file = downloaded.remove(idx);
-
-                    self.set_wallpaper_cmd(&file.to_string_lossy());
-                }
-                _ => unreachable!(),
+        let this = QPointer::from(&*self);
+        execute_async(enter_tokio(async move {
+            let this = this.as_ref().expect("");
+            if let Err(e) = next_wallpaper(&this.config.borrow()).await {
+                this.error(e.to_string().into());
             }
-        };
-        if let Err(e) = r {
-            self.error(e.to_string().into());
-        }
-    }
-
-    fn set_wallpaper_cmd(&self, file: &str) {
-        let config = self.config.borrow();
-        let de = &config.de.borrow()[config.de_index];
-        let cmd = String::from_utf16_lossy(de.cmd.to_slice());
-        process::Command::new("sh")
-            .env("WALLPAPER", file)
-            .arg("-c")
-            .arg(&cmd)
-            .spawn()
-            .expect("");
+        }));
     }
 
     fn update_diskusage_and_autoclean(&mut self) -> Result<(), failure::Error> {
@@ -549,7 +470,7 @@ impl MutListItem for QWallpaper {
     }
 }
 
-fn download_image(
+async fn download_image(
     id: &str,
     urlbase: &str,
     resolution: &str,
@@ -566,7 +487,8 @@ fn download_image(
             let mut r = reqwest::get(&format!(
                 "https://wpdn.bohan.co{}_{}.jpg",
                 urlbase, resolution
-            ))?;
+            ))
+            .await?;
             if r.status() == reqwest::StatusCode::NOT_FOUND {
                 continue;
             }
@@ -576,8 +498,10 @@ fn download_image(
             if !output_dir.exists() {
                 fs::create_dir_all(&output_dir)?;
             }
-            let mut file = fs::File::create(&output)?;
-            r.copy_to(&mut file)?;
+            let mut file = File::create(&output).await?;
+            while let Some(chunk) = r.chunk().await? {
+                file.write(&chunk).await?;
+            }
         }
         return Ok(output.to_string_lossy().into());
     }
@@ -619,7 +543,7 @@ impl From<&ImageMeta> for QWallpaperInfo {
     }
 }
 
-fn fetch_wallpapers(offset: usize, limit: usize) -> Result<Vec<RawImage>, failure::Error> {
+async fn fetch_wallpapers(offset: usize, limit: usize) -> Result<Vec<RawImage>, failure::Error> {
     let client = build_client();
 
     let offset = offset.to_string();
@@ -634,13 +558,13 @@ fn fetch_wallpapers(offset: usize, limit: usize) -> Result<Vec<RawImage>, failur
     )
     .expect("parse url");
 
-    let resp: Response<RawImage> = client.get(url).send()?.json()?;
+    let resp: Response<RawImage> = client.get(url).send().await?.json().await?;
     let images = resp?;
 
-    fill_wallpapers_metadata(&client, images)
+    fill_wallpapers_metadata(&client, images).await
 }
 
-fn fetch_wallpapers_by_id<'a, T: AsRef<str>>(
+async fn fetch_wallpapers_by_id<'a, T: AsRef<str>>(
     id_list: &[T],
 ) -> Result<Vec<RawImage>, failure::Error> {
     let client = build_client();
@@ -657,7 +581,7 @@ fn fetch_wallpapers_by_id<'a, T: AsRef<str>>(
     )
     .expect("parse url");
 
-    let resp: Response<RawImage> = client.get(url).send()?.json()?;
+    let resp: Response<RawImage> = client.get(url).send().await?.json().await?;
     let mut images = resp?;
     // Keep the order
     let id_index: HashMap<&str, usize> = id_list
@@ -667,10 +591,10 @@ fn fetch_wallpapers_by_id<'a, T: AsRef<str>>(
         .collect();
     images.sort_by_key(|img| id_index.get(&*img.object_id));
 
-    fill_wallpapers_metadata(&client, images)
+    fill_wallpapers_metadata(&client, images).await
 }
 
-fn fill_wallpapers_metadata(
+async fn fill_wallpapers_metadata(
     client: &reqwest::Client,
     mut images: Vec<RawImage>,
 ) -> Result<Vec<RawImage>, failure::Error> {
@@ -692,7 +616,7 @@ fn fill_wallpapers_metadata(
     )
     .expect("parse url");
 
-    let resp: Response<ImageMeta> = client.get(url).send()?.json()?;
+    let resp: Response<ImageMeta> = client.get(url).send().await?.json().await?;
     let metas = resp?;
 
     for meta in metas {
@@ -705,6 +629,92 @@ fn fill_wallpapers_metadata(
     }
 
     Ok(images)
+}
+
+// TODO: allow systray run this
+async fn next_wallpaper(config: &Config) -> Result<(), failure::Error> {
+    let resolution = config.resolution.download[config.resolution.download_index].to_qbytearray();
+    let resolution = resolution.to_str().unwrap();
+    match config.auto_change.mode {
+        // Newest
+        0 => {
+            let wallpaper = if let Some(r) = fetch_wallpapers(0, 1).await?.pop() {
+                r
+            } else {
+                return Ok(());
+            };
+
+            let path = download_image(
+                &wallpaper.object_id,
+                &wallpaper.urlbase,
+                resolution,
+                &config.download_dir,
+                wallpaper.wp && config.resolution.original,
+            )
+            .await?;
+
+            set_wallpaper(&config, &path);
+        }
+        // Favorites
+        1 => {
+            let idx = rand::random::<usize>() % config.likes.len();
+            let id = &config.likes[idx];
+            let wallpaper = if let Some(x) = fetch_wallpapers_by_id(&[id]).await?.pop() {
+                x
+            } else {
+                return Ok(());
+            };
+            let path = download_image(
+                &wallpaper.object_id,
+                &wallpaper.urlbase,
+                resolution,
+                &config.download_dir,
+                wallpaper.wp && config.resolution.original,
+            )
+            .await?;
+            set_wallpaper(&config, &path);
+        }
+        // Random
+        2 => {
+            let mut downloaded = fs::read_dir(&config.download_dir)?
+                .filter_map(Result::ok)
+                .map(|entry| (entry.path(), entry.file_name()))
+                .filter(|(_path, name)| {
+                    let name = name.to_string_lossy();
+                    parse_wallpaper_filename(&name)
+                        // TODO
+                        .map(|(_, res)| {
+                            (res == ORIGINAL_RESOLUTION && config.resolution.original)
+                                || res == resolution
+                        })
+                        .unwrap_or(false)
+                })
+                .map(|(path, _name)| path)
+                .collect::<Vec<_>>();
+            if downloaded.is_empty() {
+                return Ok(());
+            }
+
+            let idx = rand::random::<usize>() % downloaded.len();
+
+            let file = downloaded.remove(idx);
+
+            set_wallpaper(&config, &file.to_string_lossy());
+        }
+        _ => unreachable!(),
+    }
+    Ok(())
+}
+
+fn set_wallpaper(config: &Config, file: &str) {
+    let de = &config.de.borrow()[config.de_index];
+    let cmd = String::from_utf16_lossy(de.cmd.to_slice());
+    process::Command::new("sh")
+        .env("WALLPAPER", file)
+        .arg("-c")
+        .arg(&cmd)
+        .spawn()
+        .expect("");
 }
 
 fn build_client() -> reqwest::Client {
