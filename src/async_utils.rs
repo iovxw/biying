@@ -15,7 +15,7 @@ lazy_static! {
     };
 }
 
-pub async fn enter_tokio_<T>(mut f: impl Future<Output = T>) -> T {
+pub async fn enter_tokio<T>(mut f: impl Future<Output = T>) -> T {
     poll_fn(|context| {
         HANDLE.enter(|| {
             // Safety: pinned on stack, and we are in an async fn
@@ -25,39 +25,4 @@ pub async fn enter_tokio_<T>(mut f: impl Future<Output = T>) -> T {
         })
     })
     .await
-}
-
-pub fn enter_tokio<T>(f: impl Future<Output = T>) -> impl Future<Output = T> {
-    FixPoll(Some(async { enter_tokio_(f).await }))
-}
-
-// this is a workaround
-// fix qmetaobject::execute_async
-pub struct FixPoll<F>(Option<F>);
-
-impl<F, T> Future for FixPoll<F>
-where
-    F: Future<Output = T>,
-{
-    type Output = T;
-
-    fn poll(self: Pin<&mut Self>, cx: &mut std::task::Context) -> std::task::Poll<T> {
-        let this = unsafe { &mut self.get_unchecked_mut().0 };
-        if let Some(f) = this {
-            let r = unsafe { Pin::new_unchecked(f) }.poll(cx);
-            if r.is_ready() {
-                this.take(); // drop
-            }
-            r
-        } else {
-            dbg!("nooo");
-            std::task::Poll::Pending
-        }
-    }
-}
-
-impl<F> Drop for FixPoll<F> {
-    fn drop(&mut self) {
-        dbg!("DROP");
-    }
 }
