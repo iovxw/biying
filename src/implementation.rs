@@ -24,6 +24,24 @@ use crate::listmodel::{MutListItem, MutListModel};
 const MAX_WP_NUM_IN_A_PAGE: usize = 20;
 const ORIGINAL_RESOLUTION: &str = "1920x1200";
 
+lazy_static! {
+    static ref CLIENT: reqwest::Client = {
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert(
+            "X-AVOSCloud-Application-Id",
+            reqwest::header::HeaderValue::from_static(env!("AVOS_ID")),
+        );
+        headers.insert(
+            "X-AVOSCloud-Application-Key",
+            reqwest::header::HeaderValue::from_static(env!("AVOS_KEY")),
+        );
+        reqwest::Client::builder()
+            .default_headers(headers)
+            .build()
+            .expect("build client")
+    };
+}
+
 #[derive(QObject, Default)]
 pub struct Wallpapers {
     base: qt_base_class!(trait QObject),
@@ -68,7 +86,7 @@ impl Wallpapers {
         let this = QPointer::from(&*self);
         execute_async(enter_tokio(async move {
             let this = this.as_ref().expect("");
-            match fetch_wallpapers(offset, MAX_WP_NUM_IN_A_PAGE).await {
+            match fetch_wallpapers(&CLIENT, offset, MAX_WP_NUM_IN_A_PAGE).await {
                 Ok(images) => {
                     let mutp = unsafe { &mut *(this as *const _ as *mut Self) };
                     for v in images {
@@ -107,7 +125,7 @@ impl Wallpapers {
         let this = QPointer::from(&*self);
         execute_async(enter_tokio(async move {
             let this = this.as_ref().expect("");
-            match fetch_wallpapers_by_id(&favorites).await {
+            match fetch_wallpapers_by_id(&CLIENT, &favorites).await {
                 Ok(images) => {
                     let mutp = unsafe { &mut *(this as *const _ as *mut Self) };
                     for img in images {
@@ -543,9 +561,11 @@ impl From<&ImageMeta> for QWallpaperInfo {
     }
 }
 
-async fn fetch_wallpapers(offset: usize, limit: usize) -> Result<Vec<RawImage>, failure::Error> {
-    let client = build_client();
-
+async fn fetch_wallpapers(
+    client: &reqwest::Client,
+    offset: usize,
+    limit: usize,
+) -> Result<Vec<RawImage>, failure::Error> {
     let offset = offset.to_string();
     let limit = limit.to_string();
     let url = reqwest::Url::parse_with_params(
@@ -561,14 +581,13 @@ async fn fetch_wallpapers(offset: usize, limit: usize) -> Result<Vec<RawImage>, 
     let resp: Response<RawImage> = client.get(url).send().await?.json().await?;
     let images = resp?;
 
-    fill_wallpapers_metadata(&client, images).await
+    fill_wallpapers_metadata(client, images).await
 }
 
 async fn fetch_wallpapers_by_id<'a, T: AsRef<str>>(
+    client: &reqwest::Client,
     id_list: &[T],
 ) -> Result<Vec<RawImage>, failure::Error> {
-    let client = build_client();
-
     let where_query: Vec<String> = id_list
         .iter()
         .map(|img| format!(r#"{{"objectId":"{}"}}"#, img.as_ref()))
@@ -591,7 +610,7 @@ async fn fetch_wallpapers_by_id<'a, T: AsRef<str>>(
         .collect();
     images.sort_by_key(|img| id_index.get(&*img.object_id));
 
-    fill_wallpapers_metadata(&client, images).await
+    fill_wallpapers_metadata(client, images).await
 }
 
 async fn fill_wallpapers_metadata(
@@ -638,7 +657,7 @@ async fn next_wallpaper(config: &Config) -> Result<(), failure::Error> {
     match config.auto_change.mode {
         // Newest
         0 => {
-            let wallpaper = if let Some(r) = fetch_wallpapers(0, 1).await?.pop() {
+            let wallpaper = if let Some(r) = fetch_wallpapers(&CLIENT, 0, 1).await?.pop() {
                 r
             } else {
                 return Ok(());
@@ -659,7 +678,7 @@ async fn next_wallpaper(config: &Config) -> Result<(), failure::Error> {
         1 => {
             let idx = rand::random::<usize>() % config.likes.len();
             let id = &config.likes[idx];
-            let wallpaper = if let Some(x) = fetch_wallpapers_by_id(&[id]).await?.pop() {
+            let wallpaper = if let Some(x) = fetch_wallpapers_by_id(&CLIENT, &[id]).await?.pop() {
                 x
             } else {
                 return Ok(());
@@ -715,23 +734,6 @@ fn set_wallpaper(config: &Config, file: &str) {
         .arg(&cmd)
         .spawn()
         .expect("");
-}
-
-fn build_client() -> reqwest::Client {
-    let mut headers = reqwest::header::HeaderMap::new();
-    headers.insert(
-        "X-AVOSCloud-Application-Id",
-        reqwest::header::HeaderValue::from_static(env!("AVOS_ID")),
-    );
-    headers.insert(
-        "X-AVOSCloud-Application-Key",
-        reqwest::header::HeaderValue::from_static(env!("AVOS_KEY")),
-    );
-    let client = reqwest::Client::builder()
-        .default_headers(headers)
-        .build()
-        .expect("build client");
-    client
 }
 
 fn linear_search_by<T>(s: &[T], f: impl Fn(&T) -> bool) -> Option<usize> {
