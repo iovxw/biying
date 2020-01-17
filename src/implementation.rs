@@ -5,12 +5,15 @@ use std::iter::FromIterator;
 use std::ops::Try;
 use std::path::PathBuf;
 use std::process;
+use std::sync::Mutex;
 use std::time::{Duration, SystemTime};
 
 use chrono::prelude::*;
 use failure::{self, format_err, Fail};
 use lazy_static::lazy_static;
 use qmetaobject::{future::execute_async, *};
+use rand::rngs::SmallRng;
+use rand::{FromEntropy, Rng};
 use regex::Regex;
 use reqwest;
 use serde::Deserialize;
@@ -25,6 +28,7 @@ const MAX_WP_NUM_IN_A_PAGE: usize = 20;
 const ORIGINAL_RESOLUTION: &str = "1920x1200";
 
 lazy_static! {
+    static ref CURRENT_WP: Mutex<Option<String>> = Mutex::new(None);
     static ref CLIENT: reqwest::Client = {
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert(
@@ -210,7 +214,7 @@ impl Wallpapers {
             let file = download_image(&id, &urlbase, resolution, &download_dir, try_original).await;
 
             match file {
-                Ok(file) => set_wallpaper(&this.config.borrow(), &file),
+                Ok(file) => set_wallpaper(&this.config.borrow(), id, &file),
                 Err(e) => {
                     this.error(e.to_string().into());
                     return;
@@ -654,78 +658,74 @@ async fn fill_wallpapers_metadata(
 async fn next_wallpaper(config: &Config) -> Result<(), failure::Error> {
     let resolution = config.resolution.download[config.resolution.download_index].to_qbytearray();
     let resolution = resolution.to_str().unwrap();
-    match config.auto_change.mode {
+    let wallpaper = match config.auto_change.mode {
         // Newest
-        0 => {
-            let wallpaper = if let Some(r) = fetch_wallpapers(&CLIENT, 0, 1).await?.pop() {
-                r
-            } else {
-                return Ok(());
-            };
-
-            let path = download_image(
-                &wallpaper.object_id,
-                &wallpaper.urlbase,
-                resolution,
-                &config.download_dir,
-                wallpaper.wp && config.resolution.original,
-            )
-            .await?;
-
-            set_wallpaper(&config, &path);
-        }
+        0 => fetch_wallpapers(&CLIENT, 0, 1).await?.pop().expect(""),
         // Favorites
         1 => {
             let idx = rand::random::<usize>() % config.likes.len();
             let id = &config.likes[idx];
-            let wallpaper = if let Some(x) = fetch_wallpapers_by_id(&CLIENT, &[id]).await?.pop() {
-                x
-            } else {
-                return Ok(());
-            };
-            let path = download_image(
-                &wallpaper.object_id,
-                &wallpaper.urlbase,
-                resolution,
-                &config.download_dir,
-                wallpaper.wp && config.resolution.original,
-            )
-            .await?;
-            set_wallpaper(&config, &path);
+            fetch_wallpapers_by_id(&CLIENT, &[id])
+                .await?
+                .pop()
+                .expect("")
         }
         // Random
-        2 => {
-            let mut downloaded = fs::read_dir(&config.download_dir)?
-                .filter_map(Result::ok)
-                .map(|entry| (entry.path(), entry.file_name()))
-                .filter(|(_path, name)| {
-                    let name = name.to_string_lossy();
-                    parse_wallpaper_filename(&name)
-                        // TODO
-                        .map(|(_, res)| {
-                            (res == ORIGINAL_RESOLUTION && config.resolution.original)
-                                || res == resolution
-                        })
-                        .unwrap_or(false)
-                })
-                .map(|(path, _name)| path)
-                .collect::<Vec<_>>();
-            if downloaded.is_empty() {
-                return Ok(());
-            }
-
-            let idx = rand::random::<usize>() % downloaded.len();
-
-            let file = downloaded.remove(idx);
-
-            set_wallpaper(&config, &file.to_string_lossy());
-        }
+        2 => random_wallpaper(&CLIENT).await?,
         _ => unreachable!(),
-    }
+    };
+    let path = download_image(
+        &wallpaper.object_id,
+        &wallpaper.urlbase,
+        resolution,
+        &config.download_dir,
+        wallpaper.wp && config.resolution.original,
+    )
+    .await?;
+    set_wallpaper(&config, wallpaper.object_id, &path);
     Ok(())
 }
 
-fn set_wallpaper(config: &Config, file: &str) {
+async fn random_wallpaper(client: &reqwest::Client) -> Result<RawImage, failure::Error> {
+    static mut WP_COUNT: Option<usize> = None;
+    thread_local! {
+        static SMALL_RNG: RefCell<SmallRng> = RefCell::new(SmallRng::from_entropy());
+    }
+
+    let wp_count = unsafe {
+        if let Some(count) = WP_COUNT {
+            count
+        } else {
+            let url = reqwest::Url::parse_with_params(
+                "https://leanapi.bohan.co/1.1/classes/Image",
+                &[("count", "1")],
+            )
+            .expect("parse url");
+            #[derive(Deserialize)]
+            struct Resp {
+                count: usize,
+            }
+            let resp: Resp = client.get(url).send().await?.json().await?;
+            WP_COUNT = Some(resp.count);
+            resp.count
+        }
+    };
+
+    let n = SMALL_RNG.with(|rng| rng.borrow_mut().gen::<usize>()) % wp_count;
+
+    let url = reqwest::Url::parse_with_params(
+        "https://leanapi.bohan.co/1.1/classes/Image",
+        &[("limit", "1"), ("skip", &n.to_string())],
+    )
+    .expect("parse url");
+
+    let resp: Response<RawImage> = client.get(url).send().await?.json().await?;
+    let mut images = resp?;
+
+    Ok(images.pop().expect(""))
+}
+
+fn set_wallpaper(config: &Config, id: String, file: &str) {
     let de = &config.de.borrow()[config.de_index];
     let cmd = String::from_utf16_lossy(de.cmd.to_slice());
     process::Command::new("sh")
@@ -734,6 +734,7 @@ fn set_wallpaper(config: &Config, file: &str) {
         .arg(&cmd)
         .spawn()
         .expect("");
+    *CURRENT_WP.lock().unwrap() = Some(id);
 }
 
 fn linear_search_by<T>(s: &[T], f: impl Fn(&T) -> bool) -> Option<usize> {
