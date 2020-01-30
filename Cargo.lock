@@ -1055,7 +1055,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "qmetaobject"
 version = "0.1.4"
-source = "git+https://github.com/woboq/qmetaobject-rs.git#a96da4d6fc9b368fc7a06de86c375196587189e9"
+source = "git+https://github.com/woboq/qmetaobject-rs.git#cd260839058f0bd2f1d5dd87f48ba46b5272e77b"
 dependencies = [
  "cpp 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "cpp_build 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1066,7 +1066,7 @@ dependencies = [
 [[package]]
 name = "qmetaobject_impl"
 version = "0.1.4"
-source = "git+https://github.com/woboq/qmetaobject-rs.git#a96da4d6fc9b368fc7a06de86c375196587189e9"
+source = "git+https://github.com/woboq/qmetaobject-rs.git#cd260839058f0bd2f1d5dd87f48ba46b5272e77b"
 dependencies = [
  "proc-macro2 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
