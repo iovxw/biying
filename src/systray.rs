@@ -153,7 +153,8 @@ fn icons() -> Vec<tray::Icon> {
         let mut img = img.to_rgba();
         let (width, height) = img.dimensions();
         for pixel in img.pixels_mut() {
-            pixel.data.rotate_right(1);
+            // rgba rotated to argb
+            pixel.0.rotate_right(1);
         }
         let icon = tray::Icon {
             width: width as i32,
