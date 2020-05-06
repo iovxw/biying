@@ -22,5 +22,10 @@ image = "0.23"
 futures = "0.3"
 tokio = { version = "0.2", features = ["full"] }
 
+jemallocator = { version = "0.3", features = ["unprefixed_malloc_on_supported_platforms", "background_threads", "background_threads_runtime_support"] }
+jemalloc-sys = { version = "0.3", features = ["profiling"] }
+jemalloc-ctl = "0.3"
+libc = "0.2"
+
 [build-dependencies]
 cpp_build = "0.5"

@@ -27,7 +27,7 @@ pub fn wait() -> Cmd {
 #[derive(QObject, Default)]
 pub struct TrayProxy {
     base: qt_base_class!(trait QObject),
-    pub connect_to_backend: qt_method!(fn (&mut self)),
+    pub connect_to_backend: qt_method!(fn(&mut self)),
     pub open: qt_signal!(),
     pub quit: qt_signal!(),
 }

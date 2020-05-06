@@ -1,7 +1,7 @@
 #![feature(try_trait)]
 #![feature(try_blocks)]
 #![feature(vec_remove_item)]
-#![recursion_limit = "128"]
+#![recursion_limit = "1024"]
 
 use std::fs::{self, File};
 use std::io::prelude::*;
@@ -14,6 +14,7 @@ use qmetaobject::*;
 mod async_utils;
 mod config;
 mod implementation;
+mod jemalloc;
 mod listmodel;
 mod systray;
 
@@ -47,6 +48,8 @@ qrc! { init_ressource,
 }
 
 fn main() {
+    jemalloc::init_opts();
+
     #[cfg(not(debug_assertions))]
     init_ressource();
     qml_register_type::<systray::TrayProxy>(cstr!("TrayProxy"), 1, 0, cstr!("TrayProxy"));
@@ -67,6 +70,9 @@ fn main() {
         );
 
         engine.exec();
+
+        jemalloc::dump();
+
         wallpapers
             .borrow()
             .config
@@ -83,6 +89,9 @@ fn main() {
                 engine_ptr->engine.reset(new QQmlApplicationEngine);
             });
         }
+
+        jemalloc::dump();
+        jemalloc::release_memory_to_os();
 
         match systray::wait() {
             systray::Cmd::Open => {

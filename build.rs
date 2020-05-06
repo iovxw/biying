@@ -16,6 +16,18 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 extern crate cpp_build;
 use std::process::Command;
 
+fn main() {
+    let qt_include_path = qmake_query("QT_INSTALL_HEADERS");
+
+    cpp_build::Config::new()
+        .include(qt_include_path.trim())
+        .build("src/main.rs");
+
+    println!("cargo:rerun-if-changed=src/main.rs");
+
+    link_qt();
+}
+
 fn qmake_query(var: &str) -> String {
     String::from_utf8(
         Command::new("qmake")
@@ -27,15 +39,8 @@ fn qmake_query(var: &str) -> String {
     .expect("UTF-8 conversion failed")
 }
 
-fn main() {
-    let qt_include_path = qmake_query("QT_INSTALL_HEADERS");
+fn link_qt() {
     let qt_library_path = qmake_query("QT_INSTALL_LIBS");
-
-    cpp_build::Config::new()
-        .include(qt_include_path.trim())
-        .build("src/main.rs");
-    println!("cargo:rerun-if-changed=src/main.rs");
-
     let macos_lib_search = if cfg!(target_os = "macos") {
         "=framework"
     } else {
