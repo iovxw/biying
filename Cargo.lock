@@ -350,9 +350,9 @@ dependencies = [
 
 [[package]]
 name = "dbus"
-version = "0.6.5"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "48b5f0f36f1eebe901b0e6bee369a77ed3396334bf3f09abd46454a576f71819"
+checksum = "add8dd36d6d34a084220eb9fe216d3e230d52b37c31702e1ffda4fb2d4ef950e"
 dependencies = [
  "libc",
  "libdbus-sys",
@@ -360,9 +360,9 @@ dependencies = [
 
 [[package]]
 name = "dbus-codegen"
-version = "0.3.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f3150cd49f3fd81f3e611ab7584f2a8e879f97ec3f782a4f35067038431edd2"
+checksum = "ae30fa3237c3a4e04fd02db3586b30b88b435662326f5574d3349d5f8fdbdaea"
 dependencies = [
  "clap",
  "dbus",
@@ -825,9 +825,9 @@ dependencies = [
 
 [[package]]
 name = "ksni"
-version = "0.0.0"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2cad716177875a2bf4d09c6d2f61d2cba9bfe0b539ad2acef70147cb1c2725f2"
+checksum = "20e6ab6f088e8f8993ff1591343fceb1db960c068e1d8161baa27dc20736fa2f"
 dependencies = [
  "dbus",
  "dbus-codegen",
