@@ -20,9 +20,9 @@ lazy_static = "1.3"
 ksni = "0.0"
 image = "0.23"
 futures = "0.3"
-tokio = { version = "0.2", features = ["full"] }
+tokio = { version = "0.2", features = ["fs", "rt-core"] }
 
-jemallocator = { version = "0.3", features = ["unprefixed_malloc_on_supported_platforms", "background_threads", "background_threads_runtime_support"] }
+jemallocator = { version = "0.3", features = ["unprefixed_malloc_on_supported_platforms", "background_threads"] }
 jemalloc-sys = { version = "0.3", features = ["profiling"] }
 jemalloc-ctl = "0.3"
 libc = "0.2"

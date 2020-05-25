@@ -84,11 +84,10 @@ fn main() {
             break;
         }
         let engine_ptr = &mut engine;
-        unsafe {
-            cpp!([engine_ptr as "QmlEngineHolder*"] {
-                engine_ptr->engine.reset(new QQmlApplicationEngine);
-            });
-        }
+
+        cpp!(unsafe [engine_ptr as "QmlEngineHolder*"] {
+            engine_ptr->engine.reset(new QQmlApplicationEngine);
+        });
 
         jemalloc::dump();
         jemalloc::release_memory_to_os();
@@ -105,17 +104,17 @@ fn main() {
 fn create_engine() -> QmlEngine {
     let mut engine = QmlEngine::new();
     let engine_ptr = &mut engine;
-    unsafe {
-        cpp!([engine_ptr as "QmlEngineHolder*"] {
-            QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 
-            translator.load(QLocale::system(), "", "", ":/assets/i18n");
-            QApplication::installTranslator(&translator);
+    cpp!(unsafe [engine_ptr as "QmlEngineHolder*"] {
+        QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 
-            auto icon = QIcon::fromTheme("livewallpaper", QIcon(":/assets/livewallpaper.svg"));
-            engine_ptr->app->setWindowIcon(icon);
-        });
-    }
+        translator.load(QLocale::system(), "", "", ":/assets/i18n");
+        QApplication::installTranslator(&translator);
+
+        auto icon = QIcon::fromTheme("livewallpaper", QIcon(":/assets/livewallpaper.svg"));
+        engine_ptr->app->setWindowIcon(icon);
+    });
+
     engine
 }
 
