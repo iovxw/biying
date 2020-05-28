@@ -1200,7 +1200,7 @@ checksum = "9a1574a51c3fd37b26d2c0032b649d08a7d51d4cca9c41bbc5bf7118fa4509d0"
 [[package]]
 name = "qmetaobject"
 version = "0.1.4"
-source = "git+https://github.com/woboq/qmetaobject-rs.git#5d1f561e53dc06175fc52321cd429076c91ada41"
+source = "git+https://github.com/woboq/qmetaobject-rs.git#582ce49d2c4e694f96a9c78155d19d51007334b1"
 dependencies = [
  "cpp",
  "cpp_build",
@@ -1213,7 +1213,7 @@ dependencies = [
 [[package]]
 name = "qmetaobject_impl"
 version = "0.1.4"
-source = "git+https://github.com/woboq/qmetaobject-rs.git#5d1f561e53dc06175fc52321cd429076c91ada41"
+source = "git+https://github.com/woboq/qmetaobject-rs.git#582ce49d2c4e694f96a9c78155d19d51007334b1"
 dependencies = [
  "proc-macro2",
  "quote",
