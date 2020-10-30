@@ -1184,7 +1184,7 @@ dependencies = [
 [[package]]
 name = "qmetaobject"
 version = "0.1.4"
-source = "git+https://github.com/woboq/qmetaobject-rs.git#45af4d1888c1e50c9c6ec687c06f050dc74fac16"
+source = "git+https://github.com/woboq/qmetaobject-rs.git#29cc75727136c8c33ff3b2544223c9a2f884b431"
 dependencies = [
  "cpp",
  "cpp_build",
@@ -1197,7 +1197,7 @@ dependencies = [
 [[package]]
 name = "qmetaobject_impl"
 version = "0.1.4"
-source = "git+https://github.com/woboq/qmetaobject-rs.git#45af4d1888c1e50c9c6ec687c06f050dc74fac16"
+source = "git+https://github.com/woboq/qmetaobject-rs.git#29cc75727136c8c33ff3b2544223c9a2f884b431"
 dependencies = [
  "proc-macro2",
  "quote",
