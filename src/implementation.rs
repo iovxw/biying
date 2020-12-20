@@ -266,7 +266,9 @@ impl Wallpapers {
         if !favorited {
             self.config.borrow_mut().likes.insert(0, id);
         } else {
-            self.config.borrow_mut().likes.remove_item(&id);
+            let likes = &mut self.config.borrow_mut().likes;
+            let pos = likes.iter().position(|x| *x == *id).expect("unreachable");
+            likes.remove(pos);
         }
         self.config.borrow().save().expect("Failed to save config!");
 

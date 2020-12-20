@@ -124,7 +124,7 @@ fn icons() -> Vec<ksni::Icon> {
     let mut icons = Vec::with_capacity(images.len());
     for img in images.iter() {
         let img = image::load_from_memory_with_format(img, ImageFormat::Png).expect("");
-        let mut img = img.to_rgba();
+        let mut img = img.to_rgba8();
         let (width, height) = img.dimensions();
         for pixel in img.pixels_mut() {
             // rgba rotated to argb
