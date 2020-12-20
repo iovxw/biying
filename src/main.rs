@@ -14,12 +14,11 @@ use qmetaobject::*;
 mod async_utils;
 mod config;
 mod implementation;
-mod jemalloc;
 mod listmodel;
 mod systray;
 
 cpp! {{
-    #include <memory>
+    #include <malloc.h>
     #include <QtGui/QIcon>
     #include <QtQuick/QtQuick>
     #include <QtCore/QTranslator>
@@ -48,8 +47,6 @@ qrc! { init_ressource,
 }
 
 fn main() {
-    jemalloc::init_opts();
-
     #[cfg(not(debug_assertions))]
     init_ressource();
     qml_register_type::<systray::TrayProxy>(cstr!("TrayProxy"), 1, 0, cstr!("TrayProxy"));
@@ -71,8 +68,6 @@ fn main() {
 
         engine.exec();
 
-        jemalloc::dump();
-
         wallpapers
             .borrow()
             .config
@@ -87,10 +82,8 @@ fn main() {
 
         cpp!(unsafe [engine_ptr as "QmlEngineHolder*"] {
             engine_ptr->engine.reset(new QQmlApplicationEngine);
+            malloc_trim(0);
         });
-
-        jemalloc::dump();
-        jemalloc::release_memory_to_os();
 
         match systray::wait() {
             systray::Cmd::Open => {
