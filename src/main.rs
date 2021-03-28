@@ -1,6 +1,5 @@
 #![feature(try_trait)]
 #![feature(try_blocks)]
-#![feature(vec_remove_item)]
 #![recursion_limit = "1024"]
 
 use std::fs::{self, File};
