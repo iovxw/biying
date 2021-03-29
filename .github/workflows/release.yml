@@ -60,7 +60,7 @@ jobs:
         sudo cp -vnpr /usr/lib/x86_64-linux-gnu/qt5/plugins/* $QTDIR/plugins/
         export VERSION=`git describe --tags`
         ../linuxdeployqt-continuous-x86_64.AppImage biying.desktop -appimage -no-translations -no-copy-copyright-files -verbose=2 -qmldir=../assets -extra-plugins=styles/libkvantum.so,styles/breeze.so,styles/qtcurve.so,styles/oxygen.so,platformthemes/libqt5ct.so,styles/libqt5ct-style.so
-        echo "::set-output name=APPIMAGE::$(ls -t *.AppImage | head -1)"
+        echo "::set-output name=APPIMAGE::$(ls -t $PWD/*.AppImage | head -1)"
     - name: Release
       uses: softprops/action-gh-release@v1
       env:
