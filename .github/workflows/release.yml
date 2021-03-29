@@ -52,6 +52,7 @@ jobs:
         AVOS_KEY: ${{ secrets.AVOS_KEY }}
       run: |
         source /opt/qt512/bin/qt512-env.sh || true
+        lrelease assets/i18n/*.ts
         cargo build --release
         cd linuxdeployqt.AppDir
         cp ../target/release/biying .
