@@ -39,7 +39,8 @@ jobs:
         kde-style-qtcurve-qt5 \
         kde-style-oxygen-qt5 \
         qt5ct
-        source /opt/qt512/bin/qt512-env.sh || true
     - name: Run tests
-      run: cargo test --verbose
+      run: |
+        source /opt/qt512/bin/qt512-env.sh || true
+        cargo test --verbose
       # continue-on-error: ${{ matrix.can-fail }}
