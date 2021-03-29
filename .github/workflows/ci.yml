@@ -1,0 +1,45 @@
+name: CI
+
+on: [push]
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        rust: [stable, nightly]
+        include:
+        # Allow failures on nightly
+        - rust: nightly
+          can-fail: true
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: hecrj/setup-rust-action@v1
+      with:
+        rust-version: ${{ matrix.rust }}
+    - uses: actions/checkout@master
+    - name: Install dependencies
+      shell: bash
+      run: |
+        sudo add-apt-repository ppa:beineri/opt-qt-5.12.1-xenial
+        sudo add-apt-repository ppa:papirus/papirus
+        sudo add-apt-repository ppa:hda-me/qt5ct
+        sudo apt-get update -y
+        sudo apt-get install libdbus-1-dev \
+        mesa-common-dev \
+        qt512declarative \
+        qt512quickcontrols2 \
+        qt512graphicaleffects \
+        qt512svg \
+        qt512tools \
+        fcitx-frontend-qt5 \
+        qt5-style-plugins \
+        qt5-style-kvantum \
+        kde-style-breeze \
+        kde-style-qtcurve-qt5 \
+        kde-style-oxygen-qt5 \
+        qt5ct
+        source /opt/qt512/bin/qt512-env.sh
+    - name: Run tests
+      run: cargo test --verbose
+      continue-on-error: ${{ matrix.can-fail }}
