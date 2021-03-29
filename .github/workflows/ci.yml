@@ -5,12 +5,12 @@ jobs:
   test:
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        rust: [stable, nightly]
-        include:
+        os: [ubuntu-16.04]
+        rust: [nightly]
+        # include:
         # Allow failures on nightly
-        - rust: nightly
-          can-fail: true
+        # - rust: nightly
+        #   can-fail: true
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -25,7 +25,7 @@ jobs:
         sudo add-apt-repository ppa:papirus/papirus
         sudo add-apt-repository ppa:hda-me/qt5ct
         sudo apt-get update -y
-        sudo apt-get install libdbus-1-dev \
+        sudo apt-get install -y libdbus-1-dev \
         mesa-common-dev \
         qt512declarative \
         qt512quickcontrols2 \
@@ -39,7 +39,7 @@ jobs:
         kde-style-qtcurve-qt5 \
         kde-style-oxygen-qt5 \
         qt5ct
-        source /opt/qt512/bin/qt512-env.sh
+        source /opt/qt512/bin/qt512-env.sh || true
     - name: Run tests
       run: cargo test --verbose
-      continue-on-error: ${{ matrix.can-fail }}
+      # continue-on-error: ${{ matrix.can-fail }}
