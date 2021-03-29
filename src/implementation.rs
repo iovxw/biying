@@ -25,6 +25,14 @@ use crate::listmodel::{MutListItem, MutListModel};
 
 const MAX_WP_NUM_IN_A_PAGE: usize = 20;
 const ORIGINAL_RESOLUTION: &str = "1920x1200";
+#[cfg(not(test))]
+const AVOS_ID: &str = env!("AVOS_ID");
+#[cfg(not(test))]
+const AVOS_KEY: &str = env!("AVOS_KEY");
+#[cfg(test)]
+const AVOS_ID: &str = "";
+#[cfg(test)]
+const AVOS_KEY: &str = "";
 
 lazy_static! {
     static ref CURRENT_WP: Mutex<Option<String>> = Mutex::new(None);
@@ -32,11 +40,11 @@ lazy_static! {
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert(
             "X-AVOSCloud-Application-Id",
-            reqwest::header::HeaderValue::from_static(env!("AVOS_ID")),
+            reqwest::header::HeaderValue::from_static(AVOS_ID),
         );
         headers.insert(
             "X-AVOSCloud-Application-Key",
-            reqwest::header::HeaderValue::from_static(env!("AVOS_KEY")),
+            reqwest::header::HeaderValue::from_static(AVOS_KEY),
         );
         reqwest::Client::builder()
             .default_headers(headers)
