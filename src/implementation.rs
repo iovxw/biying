@@ -1,8 +1,9 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::convert::Infallible;
 use std::fs;
 use std::iter::FromIterator;
-use std::ops::Try;
+use std::ops::{ControlFlow, FromResidual, Try};
 use std::path::PathBuf;
 use std::process;
 use std::sync::Mutex;
@@ -392,22 +393,28 @@ enum Response<T> {
 }
 
 impl<T> Try for Response<T> {
-    type Ok = Vec<T>;
-    type Error = ServerError;
-    fn into_result(self) -> Result<<Response<T> as Try>::Ok, Self::Error> {
+    type Output = Vec<T>;
+    type Residual = Result<Infallible, ServerError>;
+    fn branch(self) -> ControlFlow<Self::Residual, <Response<T> as Try>::Output> {
         match self {
-            Response::Ok { results } => Ok(results),
-            Response::Err { code, error } => Err(ServerError { code, error }),
+            Response::Ok { results } => ControlFlow::Continue(results),
+            Response::Err { code, error } => ControlFlow::Break(Err(ServerError { code, error })),
         }
     }
-    fn from_error(v: Self::Error) -> Self {
-        Response::Err {
-            code: v.code,
-            error: v.error,
-        }
-    }
-    fn from_ok(v: <Response<T> as Try>::Ok) -> Self {
+    fn from_output(v: <Response<T> as Try>::Output) -> Self {
         Response::Ok { results: v }
+    }
+}
+
+impl<T> FromResidual for Response<T> {
+    fn from_residual(residual: <Self as Try>::Residual) -> Self {
+        match residual {
+            Ok(_) => unreachable!(),
+            Err(e) => Self::Err {
+                code: e.code,
+                error: e.error,
+            },
+        }
     }
 }
 

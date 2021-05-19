@@ -1,4 +1,5 @@
-#![feature(try_trait)]
+#![feature(try_trait_v2)]
+#![feature(control_flow_enum)]
 #![feature(try_blocks)]
 #![recursion_limit = "1024"]
 
