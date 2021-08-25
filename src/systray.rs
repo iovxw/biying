@@ -89,7 +89,7 @@ impl ksni::Tray for Tray {
                 ..Default::default()
             }
             .into(),
-            MenuItem::Sepatator,
+            MenuItem::Separator,
             StandardItem {
                 label: "Quit".into(),
                 icon_name: "application-exit".into(),
