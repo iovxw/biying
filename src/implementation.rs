@@ -17,8 +17,7 @@ use rand::{rngs::SmallRng, Rng, SeedableRng};
 use regex::Regex;
 use reqwest;
 use serde::Deserialize;
-use tokio::fs::File;
-use tokio::prelude::*;
+use tokio::{fs::File, io::AsyncWriteExt};
 
 use crate::async_utils::enter_tokio;
 use crate::config::Config;
